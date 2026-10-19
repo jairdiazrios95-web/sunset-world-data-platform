@@ -86,9 +86,9 @@ def convert(input_dir: Path, output_dir: Path, config_path: Path, source: str | 
                     schema = pa.schema([pa.field(column, pa.string()) for column in columns])
                 groups = defaultdict(list)
                 for row in chunk:
-                    if any(not row[key] for key in spec['primary_key']):
+                    if any(not (row[key] or '').strip() for key in spec['primary_key']):
                         raise ValueError(f'{name}: missing natural key')
-                    if any(not row[key] for key in spec.get('required', [])):
+                    if any(not (row[key] or '').strip() for key in spec.get('required', [])):
                         raise ValueError(f'{name}: missing required value')
                     the_date = row[spec['date_column']] if spec['date_column'] else spec['snapshot_date']
                     groups[period_for(the_date)].append(row)

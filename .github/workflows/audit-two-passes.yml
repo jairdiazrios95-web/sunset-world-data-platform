@@ -1,0 +1,36 @@
+name: sunset-audit-two-independent-acceptance-passes
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'warehouse/loader.py'
+      - 'sunset/quality.py'
+      - 'sunset/parquet.py'
+      - 'tests/test_defensive_inputs.py'
+      - 'scripts/verify_two_acceptance_runs.py'
+      - '.github/workflows/audit-two-passes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+jobs:
+  two-full-stack-validations:
+    name: Verify two independent six-job runs on identical SHA
+    runs-on: ubuntu-22.04
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Assert original run succeeds, then dispatch and verify another full run
+        run: python scripts/verify_two_acceptance_runs.py
+      - name: Publish immutable two-pass evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sunset-two-full-acceptance-passes
+          path: reports/audit_two_passes.json
+          if-no-files-found: warn

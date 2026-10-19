@@ -61,7 +61,8 @@ def statements(source: str, columns: list[str], keys: list[str]) -> dict[str, st
     }
 
 
-def row_batches(path: Path, columns: list[str], batch_size: int) -> Iterable[list[tuple]]:
+def row_batches(path: Path, columns: list[str], batch_size: int,
+                required_keys: list[str] | None = None) -> Iterable[list[tuple]]:
     if batch_size < 1:
         raise ValueError('batch_size must be positive')
     with path.open(newline='', encoding='utf-8') as stream:
@@ -69,11 +70,16 @@ def row_batches(path: Path, columns: list[str], batch_size: int) -> Iterable[lis
         if reader.fieldnames != columns:
             raise ValueError('Input header has changed during execution')
         batch = []
-        for row in reader:
-            if None in row or any(not row.get(k) for k in columns if k):
-                # Missing nullable values are represented by empty strings in the source.
-                if None in row:
-                    raise ValueError('Malformed CSV row with excess columns')
+        required_keys = required_keys or []
+        if not set(required_keys).issubset(columns):
+            raise ValueError('Required key missing from source header')
+        for line_number, row in enumerate(reader, start=2):
+            # Both extra and missing CSV fields must fail closed. An empty
+            # string is valid in an optional field, but never in a natural key.
+            if None in row or any(value is None for value in row.values()):
+                raise ValueError(f'Malformed CSV row {line_number}: missing or extra fields')
+            if any(not row[key].strip() for key in required_keys):
+                raise ValueError(f'Empty natural key in CSV row {line_number}')
             batch.append(tuple(row[c] for c in columns))
             if len(batch) >= batch_size:
                 yield batch
@@ -107,7 +113,7 @@ def load_csv(input_file: Path, source: str, config: dict, dsn: str, batch_size: 
             cur.execute(sql['create_schema'])
             cur.execute(sql['create'])
             con.commit()
-        for chunk in row_batches(input_file, columns, batch_size):
+        for chunk in row_batches(input_file, columns, batch_size, required_keys=keys):
             with con.transaction():
                 with con.cursor() as cur:
                     cur.execute(sql['temp'])

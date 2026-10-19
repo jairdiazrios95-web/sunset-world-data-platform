@@ -24,7 +24,8 @@ ISO = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 def inspect_csv(path: Path, spec: dict, source: str) -> tuple[dict, list]:
     keys = spec['primary_key']
     metrics = {'rows':0, 'missing_required':0,'invalid_dates':0,'invalid_amounts':0,
-               'invalid_currency':0, 'duplicate_keys':0, 'negative_amounts':0}
+               'invalid_currency':0, 'duplicate_keys':0, 'negative_amounts':0,
+               'malformed_rows':0}
     errors=[]
     # Use an on-disk key index for large sources; avoid >10M Python set entries.
     spill=tempfile.TemporaryDirectory(prefix='sunset_unique_') if path.stat().st_size>20_000_000 else None
@@ -34,11 +35,19 @@ def inspect_csv(path: Path, spec: dict, source: str) -> tuple[dict, list]:
     try:
         with path.open(encoding='utf-8', newline='') as f:
             reader=csv.DictReader(f)
-            if not set(keys + spec.get('required',[])).issubset(reader.fieldnames or []):
-                return metrics, [f'{source}: missing required columns']
+            columns = reader.fieldnames or []
+            if (not columns or len(columns) != len(set(columns))
+                    or not set(keys + spec.get('required', [])).issubset(columns)):
+                return metrics, [f'{source}: missing or duplicate required columns']
             for row in reader:
                 metrics['rows']+=1
-                if any(not row.get(k,'').strip() for k in spec.get('required',[])):
+                if None in row or any(value is None for value in row.values()):
+                    # A shortened or oversized row is an invalid record, not
+                    # a Python exception or an accepted nullable field.
+                    metrics['malformed_rows']+=1
+                    continue
+                if any(not row.get(k, '').strip()
+                       for k in set(keys + spec.get('required', []))):
                     metrics['missing_required']+=1
                 key=tuple(row[k] for k in keys)
                 if key_db:
@@ -55,7 +64,7 @@ def inspect_csv(path: Path, spec: dict, source: str) -> tuple[dict, list]:
                         date.fromisoformat(value)
                     except (ValueError,TypeError):metrics['invalid_dates']+=1
                 if source == 'fx_historico':
-                    rate=row.get('tipo_cambio','')
+                    rate=row.get('tipo_cambio','') or ''
                     if not RE_MONEY.fullmatch(rate): metrics['invalid_amounts']+=1
                     elif float(rate)<=0: metrics['negative_amounts']+=1
                     if row.get('moneda_origen') not in ('MXN','USD') or row.get('moneda_destino')!='MXN':
@@ -63,7 +72,7 @@ def inspect_csv(path: Path, spec: dict, source: str) -> tuple[dict, list]:
                 if source == 'leads_ventas':
                     if row.get('moneda') not in ('MXN','USD'):metrics['invalid_currency']+=1
                     if row.get('venta_id'):
-                        amount=row.get('monto_venta','')
+                        amount=row.get('monto_venta','') or ''
                         if not RE_MONEY.fullmatch(amount):metrics['invalid_amounts']+=1
                         elif float(amount)<=0:metrics['negative_amounts']+=1
     finally:
