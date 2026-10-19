@@ -24,3 +24,16 @@ def test_pg_real_queries_have_conflict_and_foreign_key_parent():
         assert 'generate_series' in query
         assert 'ON CONFLICT(id) DO NOTHING' in query
     with pytest.raises(ValueError): insert_sql('wrong;DROP')
+
+
+def test_parameterised_postgres_sql_escapes_literal_modulo():
+    # The original benchmark emitted '%s' where SQL needed modulo + bind,
+    # and '%365' that psycopg can misparse as a placeholder.
+    leads = insert_sql('leads')
+    assert 'n%%1000000' in leads
+    assert '(n%%365)' in leads
+    for source in ('payments', 'comments'):
+        sql = insert_sql(source)
+        assert '((n-1) %% %s::bigint)+1' in sql
+        assert '(n%%365)' in sql
+        assert sql.count('%s') == 3

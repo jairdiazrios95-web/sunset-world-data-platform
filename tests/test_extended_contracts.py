@@ -1,10 +1,10 @@
-from datetime import datetime,timezone
+from datetime import datetime,timezone,timedelta
 from pathlib import Path
 import pytest
 from sunset.parquet import period_for,csv_batches
 from streaming.rules import detect
 from streaming.producer import make_events
-from oracle.snapshot_to_lake import make_sql,interval_run_id
+from oracle.snapshot_to_lake import make_sql,interval_run_id,oracle_utc_naive
 from rag.build_embeddings import redact,chunk_identity,digest,chunks
 from warehouse.build_marts import REQUIRED
 from sunset.config import load
@@ -78,3 +78,15 @@ def test_psi_distribution():
     assert categorical_psi(['a','a','b'],['a','a','b'])==0
     assert categorical_psi(['a','a','b'],['b','b','a'])>0
     with pytest.raises(ValueError):categorical_psi([],['a'])
+
+
+def test_oracle_aware_intervals_normalize_equivalent_instants():
+    utc_start = datetime(2026, 10, 19, 8, 0, tzinfo=timezone.utc)
+    mx_start = datetime(2026, 10, 19, 2, 0, tzinfo=timezone(timedelta(hours=-6)))
+    utc_end = utc_start + timedelta(hours=1)
+    mx_end = mx_start + timedelta(hours=1)
+    assert oracle_utc_naive(mx_start) == datetime(2026, 10, 19, 8, 0)
+    assert interval_run_id('leads_ventas', utc_start, utc_end) == interval_run_id(
+        'leads_ventas', mx_start, mx_end)
+    with pytest.raises(ValueError):
+        oracle_utc_naive(datetime(2026, 10, 19, 8, 0))

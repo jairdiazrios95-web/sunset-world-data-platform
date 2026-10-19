@@ -40,14 +40,17 @@ def batches(total: int, size: int):
 def insert_sql(source: str):
     if source == 'leads':
         return '''INSERT INTO stress.leads(id, cliente_id, created_at)
-                  SELECT n, (n%1000000)+1, date '2024-01-01' + (n%365)::integer
+                  SELECT n, (n%%1000000)+1, date '2024-01-01' + (n%%365)::integer
                   FROM generate_series(%s::bigint,%s::bigint) n
                   ON CONFLICT(id) DO NOTHING'''
-    if source in ('payments','comments'):
+    if source in ('payments', 'comments'):
+        # Psycopg uses %s for parameters; %% escapes a literal SQL modulo.
+        # Keep source allowlisted above; never interpolate arbitrary table names.
         return f'''INSERT INTO stress.{source}(id, lead_id, event_at)
-                   SELECT n, ((n-1)%%%s::bigint)+1, date '2024-01-01' + (n%%365)::integer
-                   FROM generate_series(%%s::bigint,%%s::bigint) n
-                   ON CONFLICT(id) DO NOTHING'''.replace('%%%', '%').replace('%%s', '%s').replace('%%365','%365')
+                   SELECT n, ((n-1) %% %s::bigint)+1,
+                          date '2024-01-01' + (n%%365)::integer
+                   FROM generate_series(%s::bigint,%s::bigint) n
+                   ON CONFLICT(id) DO NOTHING'''
     raise ValueError(f'Unknown stress table {source}')
 
 
@@ -74,13 +77,19 @@ def execute(dsn: str, profile: str, batch_size: int, report: Path,
             begin = time.monotonic()
             count = targets[table]
             sql = insert_sql(table)
-            for lower, upper in batches(count,batch_size):
+            print(f'[start] {table}: target={count:,}, batch_size={batch_size:,}', flush=True)
+            total_batches = (count + batch_size - 1) // batch_size
+            progress_stride = max(1, total_batches // 20)
+            for batch_number, (lower, upper) in enumerate(batches(count,batch_size), start=1):
                 with conn.cursor() as cur:
                     if table == 'leads':
                         cur.execute(sql, (lower,upper))
                     else:
                         cur.execute(sql, (targets['leads'],lower,upper))
                 conn.commit()  # Checkpoint per batch, safe restart on rerun
+                if batch_number % progress_stride == 0 or upper == count:
+                    print(f'[progress] {table}: {upper:,}/{count:,} ({100 * upper / count:.1f}%), '
+                          f'elapsed={time.monotonic()-begin:.1f}s', flush=True)
             with conn.cursor() as cur:
                 cur.execute(f'SELECT count(*) FROM stress.{table}')
                 actual = cur.fetchone()[0]
@@ -95,6 +104,7 @@ def execute(dsn: str, profile: str, batch_size: int, report: Path,
             if after_replay != count:
                 raise AssertionError(f'{table}: replay changed row count')
             conn.commit()
+            print(f'[verified] {table}: {actual:,} persisted; replay unchanged',flush=True)
             detail[table] = {'rows':actual,'replay_rows':after_replay,
                              'elapsed_seconds':round(time.monotonic()-begin,3)}
         with conn.cursor() as cur:

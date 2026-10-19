@@ -1,3 +1,12 @@
+> **Nota de actualización (19-oct-2026):** este es el informe histórico
+> elaborado antes de la publicación en GitHub. Desde entonces la corrida
+> [39332219848](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39332219848)
+> verificó **5/5 integraciones reales y acceptance PASS** con datos sintéticos.
+> Para el estado vigente y pendientes de entrega consulta
+> [ENTREGA_FINAL_CHECKLIST.md](ENTREGA_FINAL_CHECKLIST.md).
+> Las afirmaciones siguientes sobre «no ejecutado en GitHub» corresponden
+> exclusivamente al corte del 17-oct-2026 y ya no describen el estado actual.
+
 # Sunset World — Informe técnico V0.7 (17-oct-2026)
 
 ## Alcance de la nueva iteración

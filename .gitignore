@@ -24,3 +24,10 @@ reports/runs/
 *.sqlite-shm
 *.sqlite-wal
 *.sqlite-journal
+
+# Never commit release bundles, test credentials or local container state
+Sunset_World_Arquitectura_*.zip
+*.pem
+*.p12
+*.key
+*.env.local

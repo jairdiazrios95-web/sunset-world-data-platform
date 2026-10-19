@@ -6,10 +6,20 @@ DEFAULT = Path('config/pipeline.json')
 def load(path=None):
     target=Path(path or os.getenv('SUNSET_CONFIG') or DEFAULT)
     config=json.loads(target.read_text(encoding='utf-8'))
-    assert config['dataset_mode']=='synthetic', 'Only synthetic datasets permitted in this demo'
-    for name, profile in config['profiles'].items():
-        for key in ('leads','payments','comments'):
-            if not isinstance(profile[key],int) or profile[key] <= 0:
+    if config.get('dataset_mode') != 'synthetic':
+        raise ValueError('Only synthetic datasets permitted in this demo')
+    profiles = config.get('profiles')
+    if not isinstance(profiles, dict) or not profiles:
+        raise ValueError('profiles must be a non-empty object')
+    for name, profile in profiles.items():
+        if not isinstance(profile, dict):
+            raise ValueError(f'{name} must define a profile object')
+        for key in ('leads', 'payments', 'comments'):
+            value = profile.get(key)
+            if type(value) is not int or value <= 0:
                 raise ValueError(f'{name}.{key} must be a positive integer')
-    if config['parquet']['batch_size'] <= 0: raise ValueError('batch_size must be positive')
+    parquet = config.get('parquet')
+    batch_size = parquet.get('batch_size') if isinstance(parquet, dict) else None
+    if type(batch_size) is not int or batch_size <= 0:
+        raise ValueError('parquet.batch_size must be a positive integer')
     return config

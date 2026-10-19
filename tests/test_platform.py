@@ -30,3 +30,20 @@ def test_chunk_overlap_and_validation():
 def test_streaming_event_id_replay():
     args=('call-1',17,'test','2026-01-01T00:00:00Z')
     assert build_event(*args)['event_id']==build_event(*args)['event_id']
+
+
+def test_config_rejects_non_synthetic_and_bad_numeric_types(tmp_path):
+    import pytest
+    source = json.loads(Path('config/pipeline.json').read_text(encoding='utf-8'))
+    def reject(bad):
+        path = tmp_path/'invalid.json'
+        path.write_text(json.dumps(bad), encoding='utf-8')
+        with pytest.raises(ValueError):
+            load(path)
+    reject({**source, 'dataset_mode': 'production'})
+    bad = json.loads(json.dumps(source))
+    bad['profiles']['volume']['leads'] = True
+    reject(bad)
+    bad = json.loads(json.dumps(source))
+    bad['parquet']['batch_size'] = True
+    reject(bad)
