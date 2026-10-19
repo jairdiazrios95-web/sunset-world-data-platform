@@ -1,13 +1,20 @@
-# Guion ejecutivo y demostración — 5 minutos (grabación final pendiente)
+# Guion de demostración de cinco minutos - Sunset World
 
-**00:00–01:00 | Problema y propuesta.** Presentar el reto de datos fragmentados entre Voltux, Share CRM, TMS, Call Center y FX. Explicar por qué es necesario un Lake y una capa con hechos/dimensiones para analítica confiable.
+**Fecha:** 19-oct-2026. **Estado:** guion, no video MP4 grabado. Mostrar únicamente evidencias reales de GitHub Actions.
 
-**01:00–02:00 | Ingesta parametrizada.** Mostrar en terminal `config/pipeline.json`, el generador con perfiles `sample/volume`, la muestra generada y un `_manifest.json` de Parquet ya ejecutado en equipo compatible. Diferenciar volúmenes empresariales de referencia (4.5M Voltux, 6.9M pagos, 10M comentarios) de volúmenes **realmente procesados**. No usar capturas simuladas.
+## 00:00-01:00. Problema y solución
+Explicar integración de Voltux, Share CRM, TMS, FX y Call Center mediante ingesta incremental, Data Lake Parquet/MinIO, PostgreSQL dimensional y dbt, orquestados con Airflow. Kafka/Spark atiende eventos y pgvector sirve como base para una futura integración autorizada con Mantis.
 
-**02:00–03:00 | Calidad y relaciones.** Ejecutar `make demo`, abrir `reports/offline_demo_verified.json`: 1,000 leads, 140 ventas, 600 pagos, 1,200 comentarios, 1,462 cotizaciones de FX, cuatro joins conciliados en la muestra. Luego mostrar, cuando exista, la salida real de `warehouse.build_marts` y dbt.
+## 01:00-02:00. Motores funcionando
+Mostrar [GitHub Actions #39336589227](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39336589227) (SHA `cbe4c38`): cinco jobs reales y compuerta final **SUCCESS**. Explicar los artifacts, no solo los iconos verdes.
 
-**03:00–04:00 | Orquestación y streaming.** Mostrar la DAG Airflow con dos ramas paralelas, seguida por DW → dbt → calidad; reiniciar un evento Kafka y comprobar deduplicación idempotente en PostgreSQL. Si esos servicios no se ejecutan, mencionar la limitación y no presentarla como demo real.
+## 02:00-03:00. Benchmark físico
+Mostrar [estrés PostgreSQL #39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627), SHA `0f6b568`: 9M leads, 13.8M pagos y 20M comentarios = **42.8M filas** físicamente en PostgreSQL 16, **436.102 s**, cero huérfanos y conteos estables tras reenvío. Aclarar que **no** equivale a 42.8M end-to-end en todos los motores.
 
-**04:00–05:00 | Mantis, impacto y siguiente fase.** Mostrar chunks, hashes y búsqueda por pgvector cuando estén probados. Explicar impacto esperado en FX, Client Journey y gobierno de datos, y los riesgos: APIs no disponibles, SCD2, contratos de origen, privacidad, presupuesto e infraestructura. Cerrar resaltando que la evidencia reproducible es más valiosa que una promesa de *exactly-once* sin validación.
+## 03:00-04:00. Calidad, idempotencia y RAG
+Explicar manifest y reconciliación Parquet/MinIO, tareas DAG y dbt, Kafka/Spark con claves de evento, alertas en PostgreSQL, e indexación RAG con pgvector. El replay es idempotente en la base, pero no se promete exactly-once físico en todo Kafka.
 
-**Nota de integridad:** Las cinco diapositivas de esta entrega son borrador ejecutivo. El MP4 final debe producirse después de ejecutar Airflow, PostgreSQL, Kafka, Spark y pgvector, idealmente con capturas de pantalla reales y voz del candidato; el examen lo recomienda, pero es opcional.
+## 04:00-05:00. Valor y limitaciones
+Enfatizar FX, customer journey, conversión y gobierno. Oracle 11g corporativo, API Mantis, VPG, costos y PII siguen pendientes de acceso/definición. Cerrar con los dos enlaces de runs y criterios para producción.
+
+**Nota:** capturar la pantalla auténtica y narración propia; esta documentación no incluye un MP4.

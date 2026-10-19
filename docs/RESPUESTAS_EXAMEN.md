@@ -1,9 +1,20 @@
 # Sunset World | Examen técnico Data Engineer
 
 **Propuesta de arquitectura, respuestas y demostración técnica**  
-**Versión:** 0.3 | **Modalidad:** prueba con datos sintéticos | **Fecha:** octubre de 2026
+**Versión:** 1.0 | **Modalidad:** servicios reales con datos sintéticos | **Fecha:** 19 de octubre de 2026
 
-> **Alcance y evidencia:** Este documento responde los apartados 1-8 del PDF recibido. Los layouts concretos de `leads_ventas.csv` y `fx_historico.csv` no se recibieron con el PDF; se definieron esquemas de prueba y se documentan como supuestos. No se usaron conexiones reales a Oracle, Mantis ni servicios corporativos. En esta versión se verificaron **31 pruebas Python**, calidad local y reconciliación de datos con SQLite. Los componentes Docker/PostgreSQL/Parquet/Kafka/Spark/Airflow/pgvector quedan sujetos a pruebas de integración en ambiente compatible. No se declara un benchmark a escala.
+> **Alcance verificado:** Estos apartados se desarrollan a partir del examen y el repositorio. Las fuentes CSV son sintéticas; no hubo acceso a Oracle 11g ni API Mantis corporativa. El análisis funcional de VPG y conversión sigue siendo provisional.
+
+### Evidencia real y reproducible
+
+| Prueba | Medición | Fuente verificable |
+|---|---|---|
+| Cinco integraciones PostgreSQL/Parquet/dbt/MinIO/Kafka-Spark/Airflow/RAG | **5/5 PASS** y aceptación final **SUCCESS** | [GitHub Actions #39336589227](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39336589227), SHA `cbe4c38` |
+| Estrés PostgreSQL 16 físico | **42,800,000 filas:** 9 M leads, 13.8 M pagos, 20 M comentarios; **0 huérfanos** y replay sin cambio de conteos | [GitHub Actions #39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627), SHA `0f6b568` |
+| Rendimiento del benchmark relacional | **436.102 segundos** y **3,203,054,615 bytes** de base | Artifact `sunset-postgres-physical-volume-double-39334943627` |
+
+**Alcance:** Los 42.8 millones se insertaron físicamente **en PostgreSQL** usando `generate_series` y verificaciones relacionales; **no** recorrieron Oracle → MinIO → Spark → RAG de extremo a extremo. Los cinco motores sí pasaron pruebas de integración con muestras sintéticas pequeñas. Esto demuestra factibilidad técnica reproducible, no certificación de producción.
+
 
 ## 1. Ingesta Oracle 11g a Data Lake — 20 puntos
 
@@ -157,7 +168,7 @@ Para cambiar modelo se indexa un **nuevo `model_id`** en paralelo, se validan re
 
 ## 7. Comunicación a negocio — 5 puntos opcionales
 
-Se incluyen `deliverables/Sunset_World_Presentacion_Ejecutiva.pptx`, versión PDF y `docs/VIDEO_SCRIPT.md`. Las cinco láminas muestran el flujo, problema, volúmenes de referencia **no ejecutados**, resultados medidos solo en muestra, mejoras de control y decisiones pendientes. El video final de cinco minutos debe grabarse después de que el repositorio se ejecute en un ambiente compatible para mostrar Airflow, Kafka, Parquet y PostgreSQL reales, evitando fabricar capturas o resultados.
+Se incluyen `deliverables/Sunset_World_Presentacion_Ejecutiva.pptx`, versión PDF y `docs/VIDEO_SCRIPT.md`. Las cinco láminas muestran arquitectura, evidencias reales 5/5, carga SQL 42.8 millones y decisiones pendientes. El guion de video está listo, pero no existe un MP4 grabado.
 
 **Impacto esperado sin inventar ROI:** consolidación de información para FX y reporting de conversión, trazabilidad del Customer Journey, menor reconciliación manual contable y base gobernada para Mantis. Los costos requieren dimensionamiento basado en benchmark real. Supuestos críticos: autorización y SLAs de fuentes Oracle 11g, taxonomía de clientes y salas, definición VPG, condiciones de privacidad, API de Mantis y recursos de cómputo.
 
@@ -165,21 +176,20 @@ Se incluyen `deliverables/Sunset_World_Presentacion_Ejecutiva.pptx`, versión PD
 
 La opción A usa Docker Compose por perfiles (`demo`, `warehouse`, `lake`, `airflow`, `streaming`, `rag`), requisitos versionados, configuración `config/pipeline.json`, `.env.example`, CI GitHub Actions y `pytest`. Los conectores externos se inicializan solo cuando se invocan; la demo estándar de Python funciona sin servidor corporativo. Se entregan catálogos sintéticos con IDs compatibles, tests negativos, reconciliación de joins y reportería JSON. **Innovación propuesta, no implementada:** sustituir commits de carpetas por una tabla Iceberg/Delta para cargas concurrentes, time travel, eliminación de pequeños archivos y CDC en un despliegue real.
 
-### Registro honesto de validación
+### Verificación definitiva a fecha de entrega
 
-| Entregable | Validación en este ambiente |
+| Apartado | Estado comprobable |
 |---|---|
-| Python, generador, reglas, contratos, 31 tests | Ejecutado y aprobado |
-| Conciliación de 10 CSV, cuatro joins, FX | Ejecutado en SQLite (demo local) |
-| Calidad de fuente | Ejecutada y aprobada en muestra histórica |
-| Escritura/lectura Parquet real | Pendiente: `pyarrow` no instalado en este entorno |
-| PostgreSQL/pgvector | Pendiente: servicio no disponible |
-| Oracle 11g | Sin credenciales, esquema real ni client autorizado |
-| Airflow/dbt Docker | Pendiente: motor Docker no disponible |
-| Kafka/Spark Streaming | Pendiente: broker/Spark no disponibles |
-| Mantis integración empresarial | Pendiente: contrato/API no proporcionado |
-| Perfil de carga ~4.5M/6.9M/10M | Objetivo configurado; no se ejecutó |
+| Python y Parquet | CI final PASS en `main` |
+| PostgreSQL/pgvector/dbt y MinIO | Integraciones reales PASS, run #39336589227 |
+| Airflow DAG | Ejecución real PASS, mismo run |
+| Kafka/Spark → PostgreSQL | Streaming y replay PASS, mismo run |
+| RAG con modelo de embeddings y pgvector | Indexación y búsqueda real PASS, mismo run |
+| Carga física PostgreSQL 42.8 millones | PASS, run #39334943627, 436.102 s y 0 huérfanos |
+| Oracle 11g y Mantis corporativos | NO PROBADOS: faltan accesos autorizados |
+| 42.8 millones end-to-end en toda la plataforma | NO PROBADO |
+| VPG y tasa conversión oficiales | PENDIENTE de definición de negocio |
 
-### Próximo paso de aceptación técnica
+### Siguiente fase para producción
 
-En máquina Docker con dependencias instaladas: iniciar PostgreSQL, correr `sql/001_init.sql` y scripts de streaming, convertir todas las fuentes a Parquet, cargar `raw`, ejecutar `warehouse.build_marts` y dbt, comprobar dos ejecuciones idénticas sin duplicaciones, validar Airflow/Kafka/Spark/RAG y obtener tiempos/throughput/consumo reales; solo entonces grabar la prueba de cinco minutos y actualizar diapositivas con resultados definitivos.
+Validar esquemas y permisos Oracle, contratos de la API Mantis, definiciones VPG/conversión, privacidad, autorización y costos. Dimensionar hardware, protección de secretos, alertamiento, backup y recuperación antes de cargar datos reales. Se conserva el registro de pruebas con URL, SHA y artifacts de cada ejecución; no se extrapolan cifras de SQL al rendimiento de toda la arquitectura.
