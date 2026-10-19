@@ -1,15 +1,18 @@
-> **V0.7 — GitHub Actions integradas:** el workflow maestro de aceptación
-> ejecuta cinco servicios reales en paralelo al publicar `main`, y bloquea
-> la aprobación si falta una sola prueba. Se añadió prueba opcional de
-> volumetría física en PostgreSQL hasta 42.8 millones. **Pendiente publicar
-> en GitHub y comprobar los resultados de sus runners.**
-> [Runbook V0.7](docs/GITHUB_ACTIONS_EJECUCION_V07.md).
-
-> **V0.6 — Infraestructura real verificable:** se añadieron cinco flujos GitHub Actions
-> para ejecutar físicamente PostgreSQL/pgvector/dbt, PyArrow/MinIO, Airflow,
-> Kafka/Spark y RAG. **Estos flujos aún no han sido ejecutados en GitHub**;
-> consulta [validación de infraestructura V0.6](docs/VALIDACION_INFRA_REAL_V06.md).
-> Las pruebas SQLite y de contratos no sustituyen dichas integraciones.
+> **CI verificada — 19 de octubre de 2026:** los cinco jobs de integración
+> real aprobaron en la misma ejecución de GitHub Actions y la compuerta final
+> reportó `PASS`: [ejecución #39332219848](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39332219848),
+> commit `2d42784`. Corresponde a servicios reales con **datos sintéticos**;
+> no implica certificación de producción.
+>
+> **Volumetría PostgreSQL:** carga física de **42.8 millones** en curso en
+> [ejecución #39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627)
+> (rama `stress/pg-42m-20261019`). No se declara `PASS` hasta descargar su
+> artifact, comprobar los conteos y confirmar que terminó correctamente.
+> Oracle 11g real, API Mantis corporativa y criterios de VPG siguen pendientes
+> de accesos y definiciones del negocio.
+>
+> [Checklist de entrega y limitaciones](docs/ENTREGA_FINAL_CHECKLIST.md) ·
+> [Historial de evidencia GitHub](docs/GITHUB_ACTIONS_EJECUCION_V07.md)
 
 # Sunset World | Plataforma de datos demostrativa
 

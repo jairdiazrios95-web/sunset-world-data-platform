@@ -22,14 +22,26 @@ def make_sql(source:str,time_column='UPDATED_AT'):
     return (f'SELECT * FROM {table} WHERE {time_column} >= :start_time '
             f'AND {time_column} < :end_time ORDER BY {time_column}')
 
+def oracle_utc_naive(value: datetime) -> datetime:
+    """Normalize aware time to UTC before binding to timezone-naive Oracle columns.
+
+    Do not simply strip tzinfo: 02:00-06:00 and 08:00+00:00 are the same
+    instant, but removing their offsets silently changes the extraction range.
+    This adapter assumes the source UPDATED_AT values represent UTC.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError('Timezone-aware datetime required')
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def interval_run_id(source, start, end):
-    message=f'{source}|{start.isoformat()}|{end.isoformat()}'
+    message=f'{source}|{oracle_utc_naive(start).isoformat()}|{oracle_utc_naive(end).isoformat()}'
     return hashlib.sha256(message.encode()).hexdigest()[:20]
 
 def run(source:str, lower:datetime, upper:datetime, root:Path,
         config_path:Path, fetch_size:int=5000,max_retries:int=3):
     if source not in SOURCE_TABLES:raise ValueError('Unknown source')
-    if not lower.tzinfo or not upper.tzinfo or lower>=upper:
+    if lower.tzinfo is None or upper.tzinfo is None or lower.utcoffset() is None or upper.utcoffset() is None or lower >= upper:
         raise ValueError('Timezone-aware, increasing interval required')
     if fetch_size<=0 or max_retries<1:raise ValueError('Invalid batch/retry count')
     # 11g only supports python-oracledb THICK mode with a compatible client.
@@ -53,8 +65,8 @@ def run(source:str, lower:datetime, upper:datetime, root:Path,
                     with conn.cursor() as cur:
                         cur.arraysize=fetch_size
                         cur.prefetchrows=min(fetch_size,1000)
-                        cur.execute(make_sql(source),start_time=lower.replace(tzinfo=None),
-                                    end_time=upper.replace(tzinfo=None))
+                        cur.execute(make_sql(source),start_time=oracle_utc_naive(lower),
+                                    end_time=oracle_utc_naive(upper))
                         headers=[col[0].lower() for col in cur.description]
                         required=load(config_path)['sources'][source]['required']
                         if not set(required).issubset(headers):

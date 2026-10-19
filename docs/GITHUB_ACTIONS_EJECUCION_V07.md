@@ -1,6 +1,8 @@
 # V0.7 — ejecución verificable con GitHub Actions
 
-**Estado al 17 de octubre de 2026:** workflows implementados y validados sintácticamente en entorno local; **GitHub no estaba conectado a esta sesión y no se han obtenido ejecuciones de sus runners**. No utilizar etiquetas `PASS` como prueba de esos servicios sin descargar los artifacts reales de GitHub.
+**Actualización verificada 19-oct-2026:** la ejecución [39332219848](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39332219848), commit `2d42784`, finalizó `success`. Los cinco jobs (platform, minio, airflow, streaming, rag) y la compuerta `acceptance` terminaron `success`. La compuerta imprimió `status: PASS`, y produjo siete artifacts (`sunset-proof-*`, `sunset-dbt-diagnostics`, `sunset-real-acceptance-summary`). **Alcance:** pruebas sintéticas sobre servicios reales; no hay acceso corporativo a Oracle ni autorización de producción.
+
+**Stress físico:** ejecución [39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627), commit `0f6b568`, inició prueba `double` de 42.8M registros en PostgreSQL 16. **Resultado aún pendiente de verificación al escribir este informe.** El estrés no representa un flujo de 42.8M por todo Spark, Oracle y MinIO.
 
 ## Circuito automático
 
