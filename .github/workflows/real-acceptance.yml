@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: sunset-real-acceptance-${{ github.ref }}
+  group: sunset-real-acceptance-v2-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   platform:
