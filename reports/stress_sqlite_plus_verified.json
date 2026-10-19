@@ -1,0 +1,101 @@
+{
+  "scenario": "physical_sqlite_proxy_not_postgresql",
+  "started_utc": "2026-10-17T06:47:01+00:00",
+  "input_parameters": {
+    "leads": 5000000,
+    "pagos": 7500000,
+    "comentarios": 11000000,
+    "chunk_size": 100000,
+    "date_days": 731,
+    "seed": 20261016
+  },
+  "reference": {
+    "leads": 4500000,
+    "pagos": 6900000,
+    "comentarios": 10000000
+  },
+  "sources": {
+    "clientes": {
+      "target": 1666666,
+      "inserted_this_run": 1666666,
+      "total_confirmed": 1666666,
+      "seconds": 0.849
+    },
+    "leads": {
+      "target": 5000000,
+      "inserted_this_run": 5000000,
+      "total_confirmed": 5000000,
+      "seconds": 4.861
+    },
+    "tours": {
+      "target": 3500000,
+      "inserted_this_run": 3500000,
+      "total_confirmed": 3500000,
+      "seconds": 2.608
+    },
+    "contratos": {
+      "target": 700000,
+      "inserted_this_run": 700000,
+      "total_confirmed": 700000,
+      "seconds": 0.775
+    },
+    "pagos": {
+      "target": 7500000,
+      "inserted_this_run": 7500000,
+      "total_confirmed": 7500000,
+      "seconds": 6.269
+    },
+    "comentarios": {
+      "target": 11000000,
+      "inserted_this_run": 11000000,
+      "total_confirmed": 11000000,
+      "seconds": 12.711
+    }
+  },
+  "batches_committed": 294,
+  "source_counts": {
+    "clientes": 1666666,
+    "leads": 5000000,
+    "tours": 3500000,
+    "contratos": 700000,
+    "pagos": 7500000,
+    "comentarios": 11000000,
+    "fx": 1462
+  },
+  "orphan_counts": {
+    "contratos_sin_lead": 0,
+    "pagos_sin_contrato": 0,
+    "comentarios_sin_tour": 0,
+    "ventas_sin_fx": 0
+  },
+  "failure_injection": {
+    "orphan_payment_rejected": true,
+    "orphan_comment_rejected": true
+  },
+  "replay": {
+    "leads": {
+      "replayed_rows": 1000,
+      "unexpected_inserts": 0
+    },
+    "pagos": {
+      "replayed_rows": 1000,
+      "unexpected_inserts": 0
+    },
+    "comentarios": {
+      "replayed_rows": 1000,
+      "unexpected_inserts": 0
+    }
+  },
+  "warehouse_counts": {
+    "fact_ventas": 700000,
+    "fact_pagos": 7500000,
+    "fact_interacciones": 11000000
+  },
+  "warehouse_seconds": 9.186,
+  "warehouse_replay_seconds": 3.598,
+  "status": "PASS",
+  "finished_utc": "2026-10-17T06:47:49+00:00",
+  "elapsed_seconds": 47.506,
+  "peak_process_rss_mib": 129.05,
+  "db_bytes": 928276480
+}

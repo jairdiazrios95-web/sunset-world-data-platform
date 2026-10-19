@@ -1,0 +1,6 @@
+-- UPSERT application pattern reference only.
+-- The DDL for processed and alert streams lives exclusively in 005_streaming.sql,
+-- preventing schema definition drift between startup files.
+-- INSERT INTO ops.call_center_alert(event_id,call_id,event_time,transcript,matched_pattern)
+-- VALUES (%s,%s,%s,%s,%s) ON CONFLICT(event_id) DO UPDATE SET
+-- transcript=excluded.transcript, matched_pattern=excluded.matched_pattern;

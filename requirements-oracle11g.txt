@@ -1,0 +1,3 @@
+# Oracle 11.2 requires an external compatible Oracle Instant Client 19.x
+# and python-oracledb Thick mode; thin mode cannot connect to Oracle 11g.
+oracledb==3.4.2

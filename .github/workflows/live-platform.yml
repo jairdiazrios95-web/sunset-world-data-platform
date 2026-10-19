@@ -1,0 +1,51 @@
+name: sunset-real-parquet-postgres-pgvector-dbt
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  live-postgres-parquet:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: sunset
+          POSTGRES_PASSWORD: ci_local_only_2026
+          POSTGRES_DB: sunset
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sunset -d sunset"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      SUNSET_PG_DSN: postgresql://sunset:ci_local_only_2026@localhost:5432/sunset
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: sunset
+      PGUSER: sunset
+      PGPASSWORD: ci_local_only_2026
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install actual data engine and dbt
+        run: python -m pip install -r requirements.txt dbt-postgres==1.9.0
+      - name: Run real Parquet - PostgreSQL - pgvector - SCD2 - dbt and replay
+        run: python scripts/verify_real_services.py --dbt --repeats 2 --report reports/live_postgres_parquet_verified.json
+      - name: Check artifact has actual PASS
+        run: python -c "import json; j=json.load(open('reports/live_postgres_parquet_verified.json')); assert j['status']=='PASS' and not j['simulation'] and j['dbt_executed']"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sunset-proof-platform
+          path: |
+            reports/live_postgres_parquet_verified.json
+            dbt/target/run_results.json
+            dbt/target/manifest.json
+          if-no-files-found: warn

@@ -1,0 +1,137 @@
+name: sunset-data-platform
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    profiles: ["warehouse", "airflow", "streaming", "rag", "monitoring", "full"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sunset}
+      POSTGRES_USER: ${POSTGRES_USER:-sunset}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Provide POSTGRES_PASSWORD via .env}
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+      - ./sql/003_upsert_patterns.sql:/docker-entrypoint-initdb.d/003_upsert_patterns.sql:ro
+      - ./sql/005_streaming.sql:/docker-entrypoint-initdb.d/005_streaming.sql:ro
+  minio:
+    image: minio/minio:RELEASE.2025-02-07T23-21-09Z
+    profiles: ["lake", "full"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Provide MINIO_ROOT_USER via .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Provide MINIO_ROOT_PASSWORD via .env}
+    command: server /data --console-address ':9001'
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["minio_data:/data"]
+  demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["demo"]
+    volumes:
+      - ./reports:/app/reports
+    command: ["python", "-m", "sunset.quality", "--input", "data/sample", "--scope", "full", "--report", "reports/demo_quality.json"]
+  airflow:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    profiles: ["airflow", "full"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      SUNSET_PROJECT_ROOT: /opt/airflow/project
+      PYTHONPATH: /opt/airflow/project
+      DEMO_SOURCE_MODE: csv
+      SUNSET_PG_DSN: postgresql://${POSTGRES_USER:-sunset}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sunset}
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-sunset}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-sunset}
+      AIRFLOW_HOME: /opt/airflow/standalone
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: America/Mexico_City
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "false"
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      ALERT_EMAIL: ${ALERT_EMAIL:-}
+    volumes:
+      - ./:/opt/airflow/project
+      - ./airflow/dags:/opt/airflow/dags:ro
+      - airflow_data:/opt/airflow/standalone
+      - sunset_lake_data:/opt/airflow/project/data/parquet
+      - sunset_reports_data:/opt/airflow/project/reports
+    working_dir: /opt/airflow/project
+    command: ["bash", "-c", "airflow standalone"]
+    ports: ["8080:8080"]
+  kafka:
+    image: apache/kafka:3.9.0
+    profiles: ["streaming", "full"]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports: ["9092:9092"]
+    volumes:
+      - ./streaming:/work/streaming:ro
+  grafana:
+    image: grafana/grafana:11.5.2
+    profiles: ["monitoring", "full"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-sunset}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-sunset}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/dashboards:/var/lib/grafana/dashboards:ro
+  spark:
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile
+    profiles: ["streaming", "full"]
+    depends_on:
+      kafka: {condition: service_started}
+      postgres: {condition: service_healthy}
+    user: root
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SUNSET_PG_DSN: postgresql://${POSTGRES_USER:-sunset}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sunset}
+      CHECKPOINT_DIR: /opt/spark/checkpoints
+      PYTHONPATH: /opt/spark/work-dir
+    volumes:
+      - ./streaming:/opt/spark/work-dir/streaming:ro
+      - spark_checkpoint:/opt/spark/checkpoints
+    working_dir: /opt/spark/work-dir
+    entrypoint: ["/opt/spark/bin/spark-submit"]
+    command:
+      - --master
+      - local[2]
+      - --packages
+      - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5
+      - /opt/spark/work-dir/streaming/structured_streaming.py
+volumes:
+  postgres_data:
+  minio_data:
+  airflow_data:
+  sunset_lake_data:
+  sunset_reports_data:
+  spark_checkpoint:
+  grafana_data:

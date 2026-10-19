@@ -1,0 +1,162 @@
+{
+  "title": "Sunset World | Calidad y operación",
+  "uid": "sunset-data-quality",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "timezone": "browser",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "tags": [
+    "synthetic-demo",
+    "sunset"
+  ],
+  "panels": [
+    {
+      "title": "Registros extraídos por fuente",
+      "type": "timeseries",
+      "id": 1,
+      "datasource": {
+        "type": "postgres",
+        "uid": "sunset_pg"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "sunset_pg"
+          },
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(started_at, 1d), source_name AS metric, SUM(extracted) AS value FROM ops.batch_audit WHERE $__timeFilter(started_at) GROUP BY 1,2 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "title": "Registros rechazados",
+      "type": "timeseries",
+      "id": 2,
+      "datasource": {
+        "type": "postgres",
+        "uid": "sunset_pg"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "sunset_pg"
+          },
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(started_at, 1d), source_name AS metric, SUM(rejected) AS value FROM ops.batch_audit WHERE $__timeFilter(started_at) GROUP BY 1,2 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "title": "Duración por fuente",
+      "type": "timeseries",
+      "id": 3,
+      "datasource": {
+        "type": "postgres",
+        "uid": "sunset_pg"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "sunset_pg"
+          },
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(started_at, 1d), source_name AS metric, AVG(elapsed_seconds) AS value FROM ops.batch_audit WHERE $__timeFilter(started_at) GROUP BY 1,2 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "title": "Alertas transcripciones",
+      "type": "timeseries",
+      "id": 4,
+      "datasource": {
+        "type": "postgres",
+        "uid": "sunset_pg"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "sunset_pg"
+          },
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT $__timeGroupAlias(detected_at, 1d), matched_pattern AS metric, COUNT(*) AS value FROM ops.call_center_alert WHERE $__timeFilter(detected_at) GROUP BY 1,2 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}

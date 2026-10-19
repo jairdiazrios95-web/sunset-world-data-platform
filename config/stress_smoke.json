@@ -1,0 +1,8 @@
+{
+  "leads": 1000,
+  "pagos": 1500,
+  "comentarios": 2200,
+  "chunk_size": 300,
+  "date_days": 21,
+  "seed": 42
+}

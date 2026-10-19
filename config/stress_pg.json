@@ -1,0 +1,8 @@
+{
+  "description": "Configuración sintética parametrizable para prueba física PostgreSQL. Los volúmenes son referencias del examen, no datos reales.",
+  "profiles": {
+    "smoke": {"leads": 10000, "payments": 15000, "comments": 20000},
+    "reference": {"leads": 4500000, "payments": 6900000, "comments": 10000000},
+    "double": {"leads": 9000000, "payments": 13800000, "comments": 20000000}
+  }
+}

@@ -1,0 +1,36 @@
+version: 2
+models:
+  - name: stg_leads
+    description: "Landing de leads sintéticos, normalizado para analítica."
+    columns:
+      - name: lead_id
+        data_tests: [not_null, unique]
+      - name: cliente_id
+        data_tests: [not_null]
+      - name: fuente_id
+        data_tests: [not_null]
+      - name: sala_id
+        data_tests: [not_null]
+      - name: fecha_creacion
+        data_tests: [not_null]
+  - name: stg_fx
+    description: "Tipo de cambio sintético diario, validado por moneda y fecha."
+    columns:
+      - name: fecha
+        data_tests: [not_null]
+      - name: moneda_origen
+        data_tests: [not_null]
+      - name: moneda_destino
+        data_tests: [not_null]
+      - name: tipo_cambio
+        data_tests: [not_null]
+  - name: ventas_por_sala
+    columns:
+      - name: destino
+        data_tests: [not_null]
+      - name: anio
+        data_tests: [not_null]
+  - name: conversion_provisional
+    columns:
+      - name: leads
+        data_tests: [not_null]

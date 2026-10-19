@@ -1,0 +1,27 @@
+{
+  "version": "0.6",
+  "source_archive": "Sunset_World_Arquitectura_A_V05_Stress_2x_Consolidado.zip",
+  "code_status": "CI workflows added and syntax validated; live services NOT run here",
+  "local_verification": {
+    "tests_passed": 51,
+    "tests_skipped": 1,
+    "quality": "PASS",
+    "sqlite": "PASS",
+    "final_release_gate": "BLOCKED (expected: live evidence absent)"
+  },
+  "real_technology_workflows": [
+    "live-airflow.yml",
+    "live-minio.yml",
+    "live-platform.yml",
+    "live-rag.yml",
+    "live-streaming.yml"
+  ],
+  "known_limitations": [
+    "no Docker runtime",
+    "PyArrow unavailable",
+    "Psycopg unavailable",
+    "no DNS access to PyPI",
+    "Oracle 11g real access absent"
+  ],
+  "production_guarantee": "NONE: testing reduces risk but cannot establish zero failures"
+}

@@ -1,0 +1,46 @@
+name: sunset-real-pyarrow-minio-roundtrip
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  minio:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      POSTGRES_PASSWORD: ci_local_only_2026
+      GRAFANA_ADMIN_PASSWORD: ci_local_only_2026
+      MINIO_ROOT_USER: ci_local_user
+      MINIO_ROOT_PASSWORD: ci_local_password_2026
+      SUNSET_S3_ENDPOINT: http://localhost:9000
+      SUNSET_S3_BUCKET: sunset-lake-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Parquet and S3 client
+        run: python -m pip install 'pyarrow==19.0.1' 'boto3==1.37.0'
+      - name: Launch real MinIO
+        run: docker compose --profile lake up -d minio
+      - name: Wait until object store serves health endpoint
+        run: |
+          for x in $(seq 1 45); do
+            if curl --silent --fail http://localhost:9000/minio/health/live >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo 'MinIO did not start'; exit 1
+      - name: Real Parquet upload download checksum and replay
+        run: python scripts/verify_minio_live.py --report reports/live_minio_verified.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sunset-proof-minio
+          path: reports/live_minio_verified.json
+          if-no-files-found: error
+      - name: Diagnose on failure
+        if: failure()
+        run: docker compose --profile lake logs --tail=100 minio
+      - name: Cleanup
+        if: always()
+        run: docker compose --profile lake down -v --remove-orphans

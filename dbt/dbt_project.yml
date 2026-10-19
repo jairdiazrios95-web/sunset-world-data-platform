@@ -1,0 +1,8 @@
+name: sunset_semantic
+version: '1.0'
+config-version: 2
+profile: sunset
+model-paths: [models]
+models:
+  sunset_semantic:
+    +materialized: view

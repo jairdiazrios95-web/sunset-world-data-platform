@@ -1,0 +1,7 @@
+# Airflow, Spark and AI dependencies live in separate, opt-in containers.
+pyarrow==19.0.1
+psycopg[binary]==3.2.6
+python-dotenv==1.0.1
+pytest==8.3.5
+sqlparse==0.5.3
+boto3==1.37.0

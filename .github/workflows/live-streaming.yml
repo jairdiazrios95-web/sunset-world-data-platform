@@ -1,0 +1,61 @@
+name: sunset-real-kafka-spark-postgres
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  live-streaming:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      POSTGRES_DB: sunset
+      POSTGRES_USER: sunset
+      POSTGRES_PASSWORD: ci_local_only_2026
+      MINIO_ROOT_USER: localonly
+      MINIO_ROOT_PASSWORD: ci_local_only_2026
+      GRAFANA_ADMIN_PASSWORD: ci_local_only_2026
+      SUNSET_PG_DSN: postgresql://sunset:ci_local_only_2026@localhost:5432/sunset
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install actual Python producer and PostgreSQL client
+        run: python -m pip install 'confluent-kafka==2.8.2' 'psycopg[binary]==3.2.6'
+      - name: Start official Kafka and pgvector PostgreSQL
+        run: docker compose --profile streaming up -d --build postgres kafka
+      - name: Wait for Kafka and PostgreSQL to actually respond
+        run: |
+          for i in $(seq 1 60); do
+            if docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list >/dev/null 2>&1 && \
+               docker compose exec -T postgres pg_isready -U sunset -d sunset >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose logs --tail=100 postgres kafka
+          exit 1
+      - name: Create required topics
+        run: docker compose exec -T kafka bash /work/streaming/init_topics.sh
+      - name: Start actual Spark Structured Streaming consumer
+        run: docker compose --profile streaming up -d --build spark
+      - name: Wait for Spark initialization, fail on crashed container
+        run: |
+          sleep 35
+          docker compose ps --status running spark | grep spark
+
+      - name: Real Kafka - Spark - PostgreSQL replay and alerts
+        run: python scripts/verify_streaming_live.py --timeout 300 --report reports/real_streaming_evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sunset-proof-streaming
+          path: reports/real_streaming_evidence.json
+          if-no-files-found: warn
+      - name: Show diagnostics on failure
+        if: failure()
+        run: docker compose --profile streaming logs --tail=100 spark kafka postgres
+      - name: Stop ephemeral services
+        if: always()
+        run: docker compose --profile streaming down -v --remove-orphans

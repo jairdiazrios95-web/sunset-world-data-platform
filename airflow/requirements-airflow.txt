@@ -1,0 +1,5 @@
+# Versions must be resolved against the exact Airflow 2.10.5 constraints.
+pyarrow==19.0.1
+psycopg[binary]==3.2.6
+sqlparse==0.5.3
+dbt-postgres==1.9.0

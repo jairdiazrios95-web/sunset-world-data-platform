@@ -1,0 +1,65 @@
+name: sunset-real-airflow-taskflow-dbt-dag
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  live-airflow:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      POSTGRES_DB: sunset
+      POSTGRES_USER: sunset
+      POSTGRES_PASSWORD: ci_local_only_2026
+      SUNSET_PG_DSN: postgresql://sunset:ci_local_only_2026@localhost:5432/sunset
+      MINIO_ROOT_USER: ci_local_user
+      MINIO_ROOT_PASSWORD: ci_local_password_2026
+      GRAFANA_ADMIN_PASSWORD: ci_local_password_2026
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install host verifier dependency
+        run: python -m pip install 'psycopg[binary]==3.2.6'
+      - name: Ensure Airflow mounted outputs are writable
+        run: |
+          mkdir -p reports dbt/target data/parquet
+          chmod -R a+rwX reports dbt/target data/parquet
+      - name: Build and launch real Apache Airflow 2 with PostgreSQL
+        run: docker compose --profile airflow up -d --build airflow
+      - name: Wait for Airflow metadata database readiness
+        run: |
+          for x in $(seq 1 75); do
+            if docker compose exec -T airflow airflow db check; then exit 0; fi
+            sleep 4
+          done
+          echo 'Airflow did not start'; exit 1
+      - name: Fix named volume permissions inside disposable CI containers
+        run: |
+          docker compose exec -T -u root airflow sh -c 'mkdir -p /opt/airflow/project/reports /opt/airflow/project/data/parquet /opt/airflow/project/dbt/target && chmod -R a+rwX /opt/airflow/project/reports /opt/airflow/project/data/parquet /opt/airflow/project/dbt/target'
+      - name: Verify DAG really parses
+        run: docker compose exec -T airflow airflow dags list --output table | grep etl_sunset
+      - name: Execute actual DAG tasks synchronously
+        run: docker compose exec -T airflow airflow dags test etl_sunset 2026-10-16
+      - name: Verify completed DAG, dbt test results and PostgreSQL landing
+        run: |
+          mkdir -p reports
+          docker compose cp airflow:/opt/airflow/project/reports/airflow_quality.json reports/airflow_quality_source.json
+          docker compose cp airflow:/opt/airflow/project/dbt/target/run_results.json reports/airflow_dbt_results.json
+          python scripts/verify_airflow_live.py \
+            --quality reports/airflow_quality_source.json \
+            --dbt-results reports/airflow_dbt_results.json \
+            --report reports/real_airflow_quality.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sunset-proof-airflow
+          path: reports/real_airflow_quality.json
+          if-no-files-found: warn
+      - name: Show diagnostics on failure
+        if: failure()
+        run: docker compose --profile airflow logs --tail=100 airflow postgres
+      - name: Cleanup
+        if: always()
+        run: docker compose --profile airflow down -v --remove-orphans

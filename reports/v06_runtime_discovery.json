@@ -1,0 +1,20 @@
+{
+  "status": "ENVIRONMENT_DISCOVERY",
+  "host": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "python": "3.13.5",
+  "docker_binary": false,
+  "py_pi_dns": false,
+  "packages": {
+    "pyarrow": false,
+    "psycopg": false,
+    "oracledb": false,
+    "pyspark": false,
+    "airflow": false,
+    "confluent_kafka": false,
+    "sentence_transformers": false,
+    "boto3": true,
+    "pytest": true
+  },
+  "real_technology_tests": "NOT_EXECUTED_IN_THIS_ENVIRONMENT",
+  "external_runner_required": true
+}

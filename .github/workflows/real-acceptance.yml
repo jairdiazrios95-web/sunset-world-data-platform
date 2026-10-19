@@ -1,0 +1,48 @@
+name: sunset-real-stack-acceptance
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sunset-real-acceptance-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  platform:
+    uses: ./.github/workflows/live-platform.yml
+  minio:
+    uses: ./.github/workflows/live-minio.yml
+  airflow:
+    uses: ./.github/workflows/live-airflow.yml
+  streaming:
+    uses: ./.github/workflows/live-streaming.yml
+  rag:
+    uses: ./.github/workflows/live-rag.yml
+  acceptance:
+    if: always()
+    needs: [platform, minio, airflow, streaming, rag]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download evidence ONLY from this workflow run
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sunset-proof-*
+          path: reports/github-real-evidence
+          merge-multiple: true
+      - name: Check all five actual integrations, fail if evidence is missing
+        run: |
+          python scripts/acceptance_gate.py \
+            --evidence reports/github-real-evidence \
+            --report reports/github_real_acceptance.json
+      - name: Upload immutable aggregate acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunset-real-acceptance-summary
+          path: reports/github_real_acceptance.json
+          if-no-files-found: warn

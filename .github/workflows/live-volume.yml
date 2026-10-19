@@ -1,0 +1,48 @@
+name: sunset-real-postgresql-volume-stress
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'smoke (~45k), reference (~21.4M), double (~42.8M). Large profiles may exceed hosted runner storage/time.'
+        type: choice
+        required: true
+        default: smoke
+        options: [smoke, reference, double]
+permissions:
+  contents: read
+jobs:
+  pg-stress:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: sunset
+          POSTGRES_PASSWORD: ci_local_only_2026
+          POSTGRES_DB: sunset
+        ports: [5432:5432]
+        options: >-
+          --health-cmd 'pg_isready -U sunset -d sunset'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 25
+    env:
+      SUNSET_PG_DSN: postgresql://sunset:ci_local_only_2026@localhost:5432/sunset
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install actual PostgreSQL adapter
+        run: python -m pip install 'psycopg[binary]==3.2.6'
+      - name: Check available storage capacity
+        run: df -h / /var/lib/docker
+      - name: Run physical PostgreSQL volume, FK and replay verification
+        run: python stress/postgres_live_stress.py --profile '${{ inputs.profile }}' --report reports/live_pg_stress.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sunset-proof-real-postgres-volume-${{ inputs.profile }}
+          path: reports/live_pg_stress.json
+          if-no-files-found: warn

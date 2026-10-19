@@ -1,0 +1,18 @@
+{
+  "engine": "SQLite relational proxy, not production PostgreSQL",
+  "status": "PASS",
+  "violations": {
+    "contract_client_mismatch": 0,
+    "comment_client_mismatch": 0,
+    "sale_currency_conversion_mismatch": 0,
+    "non_positive_paid_amounts": 0,
+    "non_positive_sale_amounts": 0
+  },
+  "facts": {
+    "fact_ventas": 1260000,
+    "fact_pagos": 13800000,
+    "fact_interacciones": 20000000
+  },
+  "elapsed_seconds": 5.243,
+  "verified_utc": "2026-10-17T06:56:23+00:00"
+}

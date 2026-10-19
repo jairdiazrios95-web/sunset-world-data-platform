@@ -1,0 +1,32 @@
+name: sunset-python-verified-ci
+on:
+  push:
+  pull_request:
+jobs:
+  quality-and-integration-sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install lightweight test runner
+        run: python -m pip install pytest==8.3.5 PyYAML==6.0.2
+      - name: Syntax validation
+        run: python -m compileall -q sunset warehouse oracle airflow/dags streaming rag stress
+      - name: Automated tests
+        run: python -m pytest -q tests
+      - name: Source contracts and referential validation
+        run: python -m sunset.quality --input data/sample --scope full --report reports/ci_quality.json
+      - name: SQL join reconciliation via SQLite
+        run: python -m sunset.offline_demo --input data/sample --report reports/ci_sqlite.json
+      - name: Persistent SQL stress smoke and restart contracts
+        run: python stress/sqlite_load.py --config config/stress_smoke.json --db ci_proxy.sqlite --report reports/ci_stress_smoke.json
+      - name: Upload validation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sqlite-validation
+          path: |
+            reports/ci_quality.json
+            reports/ci_sqlite.json
+            reports/ci_stress_smoke.json

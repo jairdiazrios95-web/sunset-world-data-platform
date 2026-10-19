@@ -1,0 +1,176 @@
+{
+  "project": "sunset-world-data-engineering-demo",
+  "dataset_mode": "synthetic",
+  "seed": 20261016,
+  "profiles": {
+    "sample": {
+      "leads": 1000,
+      "payments": 600,
+      "comments": 1200
+    },
+    "volume": {
+      "leads": 4500000,
+      "payments": 6900000,
+      "comments": 10000000
+    }
+  },
+  "sources": {
+    "leads_ventas": {
+      "date_column": "fecha_creacion",
+      "primary_key": [
+        "lead_id"
+      ],
+      "target": "leads",
+      "required": [
+        "lead_id",
+        "cliente_id",
+        "fuente_id",
+        "sala_id",
+        "fecha_creacion",
+        "updated_at"
+      ]
+    },
+    "fx_historico": {
+      "date_column": "fecha",
+      "primary_key": [
+        "fecha",
+        "moneda_origen",
+        "moneda_destino"
+      ],
+      "target": "fx",
+      "required": [
+        "fecha",
+        "moneda_origen",
+        "moneda_destino",
+        "tipo_cambio"
+      ]
+    },
+    "clientes": {
+      "date_column": "fecha_alta",
+      "primary_key": [
+        "cliente_id"
+      ],
+      "target": "clientes",
+      "required": [
+        "cliente_id",
+        "segmento"
+      ]
+    },
+    "tours": {
+      "date_column": "fecha_tour",
+      "primary_key": [
+        "tour_id"
+      ],
+      "target": "tours",
+      "required": [
+        "tour_id",
+        "lead_id",
+        "cliente_id"
+      ]
+    },
+    "contratos": {
+      "date_column": "fecha_contrato",
+      "primary_key": [
+        "contrato_id"
+      ],
+      "target": "contratos",
+      "required": [
+        "contrato_id",
+        "venta_id",
+        "cliente_id"
+      ]
+    },
+    "pagos": {
+      "date_column": "fecha_pago",
+      "primary_key": [
+        "pago_id"
+      ],
+      "target": "pagos",
+      "required": [
+        "pago_id",
+        "contrato_id",
+        "monto_pago"
+      ]
+    },
+    "comentarios": {
+      "date_column": "fecha_comentario",
+      "primary_key": [
+        "comentario_id"
+      ],
+      "target": "comentarios",
+      "required": [
+        "comentario_id",
+        "tour_id",
+        "cliente_id",
+        "texto"
+      ]
+    },
+    "salas": {
+      "date_column": null,
+      "snapshot_date": "2024-01-01",
+      "primary_key": [
+        "sala_id"
+      ],
+      "target": "salas",
+      "required": [
+        "sala_id",
+        "destino"
+      ]
+    },
+    "fuentes": {
+      "date_column": null,
+      "snapshot_date": "2024-01-01",
+      "primary_key": [
+        "fuente_id"
+      ],
+      "target": "fuentes",
+      "required": [
+        "fuente_id",
+        "nombre_fuente"
+      ]
+    },
+    "productos": {
+      "date_column": null,
+      "snapshot_date": "2024-01-01",
+      "primary_key": [
+        "producto_id"
+      ],
+      "target": "productos",
+      "required": [
+        "producto_id",
+        "nombre_producto"
+      ]
+    }
+  },
+  "parquet": {
+    "compression": "snappy",
+    "batch_size": 50000,
+    "partition_columns": [
+      "year",
+      "month"
+    ],
+    "max_rows_per_file": 250000
+  },
+  "generation": {
+    "chunk_size": 50000,
+    "start_date": "2024-01-01",
+    "end_date": "2025-12-31",
+    "seed": 20261016
+  },
+  "monitoring": {
+    "max_fx_age_days": 3,
+    "max_lead_age_days": 1095,
+    "required_quality_rules": 5
+  },
+  "warehouse": {
+    "batch_size": 5000,
+    "fiscal_year_start_month": 1,
+    "unknown_member_policy": "quarantine",
+    "upsert_mode": "snapshot"
+  },
+  "assumptions": {
+    "volume": "4.5M Voltux is a system-wide reference; represented as leads_ventas for load testing only",
+    "vpg": "provisional; business must approve denominator",
+    "model_api": "Mantis enterprise API not provided"
+  }
+}

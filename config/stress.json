@@ -1,0 +1,8 @@
+{
+  "leads": 5000000,
+  "pagos": 7500000,
+  "comentarios": 11000000,
+  "chunk_size": 100000,
+  "date_days": 731,
+  "seed": 20261016
+}

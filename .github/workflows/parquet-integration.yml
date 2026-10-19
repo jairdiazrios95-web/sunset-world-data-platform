@@ -1,0 +1,16 @@
+name: sunset-parquet-real-integration
+on:
+  push:
+  pull_request:
+jobs:
+  parquet-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install actual PyArrow
+        run: python -m pip install pyarrow==19.0.1 pytest==8.3.5
+      - name: Real CSV-to-Parquet roundtrip and replay
+        run: python -m pytest -v tests/test_parquet_integration_optional.py

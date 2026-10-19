@@ -1,0 +1,28 @@
+{
+  "status": "BLOCKED",
+  "technology_proof": {
+    "PostgreSQL/Parquet/dbt/pgvector": {
+      "status": "MISSING",
+      "file": "live_postgres_parquet_verified.json"
+    },
+    "MinIO": {
+      "status": "MISSING",
+      "file": "live_minio_verified.json"
+    },
+    "Kafka/Spark": {
+      "status": "MISSING",
+      "file": "real_streaming_evidence.json"
+    },
+    "Airflow": {
+      "status": "MISSING",
+      "file": "real_airflow_quality.json"
+    },
+    "RAG con modelo real": {
+      "status": "MISSING",
+      "file": "real_rag_verified.json"
+    }
+  },
+  "oracle11g_real_connection": "NOT_TESTED_NO_VENDOR_ACCESS",
+  "scope": "Synthetic integration environment; not production guaranteed",
+  "approved_for_production": false
+}

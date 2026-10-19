@@ -1,0 +1,82 @@
+{
+  "status": "PASS",
+  "mode": "REAL_SQLITE_EXECUTION_NOT_POSTGRESQL",
+  "quality": "PASS",
+  "quality_checks": 14,
+  "raw_rows": {
+    "leads_ventas": 1000,
+    "fx_historico": 1462,
+    "clientes": 333,
+    "tours": 700,
+    "contratos": 140,
+    "pagos": 600,
+    "comentarios": 1200,
+    "salas": 3,
+    "fuentes": 4,
+    "productos": 3
+  },
+  "reconciliation": {
+    "warehouse_counts": {
+      "dim_cliente": 333,
+      "dim_sala": 3,
+      "dim_fuente": 4,
+      "dim_producto": 3,
+      "dim_tiempo": 731,
+      "fact_fx": 1462,
+      "fact_tours": 700,
+      "fact_ventas": 140,
+      "fact_interacciones": 1200
+    },
+    "source_expected_facts": {
+      "fact_ventas": 140,
+      "fact_tours": 700,
+      "fact_fx": 1462,
+      "fact_interacciones": 1200
+    },
+    "foreign_key_violations": 0
+  },
+  "first_run": {
+    "scd2_versions_inserted": {
+      "cliente": 0,
+      "sala": 0
+    },
+    "sales_transformed": 140
+  },
+  "second_run": {
+    "scd2_versions_inserted": {
+      "cliente": 0,
+      "sala": 0
+    },
+    "sales_transformed": 140
+  },
+  "identical_replay_hash": true,
+  "sha256": "6124574b0cc9454bedcc66bfac6dff9fb8e86c7c0f3c8d736960b7363b7e85e5",
+  "elapsed_seconds": 0.157,
+  "postgresql": "NOT_EXECUTED",
+  "parquet": "NOT_EXECUTED",
+  "airflow": "NOT_EXECUTED",
+  "kafka_spark": "NOT_EXECUTED",
+  "rag_embeddings": "NOT_EXECUTED",
+  "generation_seconds": 0.019,
+  "requested_main_source_counts": {
+    "leads_ventas": 1000,
+    "pagos": 600,
+    "comentarios": 1200
+  },
+  "generated_counts": {
+    "clientes": 333,
+    "leads_ventas": 1000,
+    "tours": 700,
+    "ventas": 140,
+    "contratos": 140,
+    "pagos": 600,
+    "comentarios": 1200,
+    "fx_historico": 1462,
+    "salas": 3,
+    "fuentes": 4,
+    "productos": 3,
+    "reference_voltux_rows": 1000,
+    "reference_tms_payments": 600,
+    "reference_tms_comments": 1200
+  }
+}
