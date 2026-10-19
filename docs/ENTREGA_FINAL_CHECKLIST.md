@@ -16,10 +16,10 @@
 
 - [x] Confirmados conteos, bytes PostgreSQL y resultado del benchmark 42.8M en la ejecución #39334943627; artifact conservado en GitHub.
 - [x] PR de hardening integrado y CI final aprobado en `main` (SHA `cbe4c38`, Actions #39336589227).
-- [ ] Revisar PDF `deliverables/Sunset_World_Respuestas_Examen.pdf` y `deliverables/Sunset_World_Presentacion_Ejecutiva.pptx` frente al SHA final: pueden contener textos anteriores a las pruebas de GitHub. No presentarlos como actualizados hasta regenerarlos y verificar.
+- [x] PDF técnico de 7 páginas, PowerPoint de 5 láminas y presentación PDF de 5 páginas regenerados y verificados por GitHub Actions [run #39341112730](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39341112730), publicados por PR #2 sobre `main`.
 - [ ] Preparar y comprobar el enlace de repositorio privado para evaluadores autorizados. **No** abrir el repo público ni compartir tokens.
 - [x] Opción comunicativa: presentación de cinco diapositivas y guion; no se declara video MP4.
-- [ ] Redactar correo con evidencia accesible, alcance exacto, limitaciones y destinatarios confirmados.
+- [x] Correo profesional preparado en `docs/CORREO_ENTREGA.md`, con enlaces a ambas ejecuciones y limitaciones. **No enviado**; faltan comprobar los accesos de los evaluadores al repositorio privado y los destinatarios efectivos.
 
 ## Procedimiento de evidencia
 
