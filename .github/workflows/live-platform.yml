@@ -41,12 +41,19 @@ jobs:
         run: python scripts/verify_real_services.py --dbt --repeats 2 --report reports/live_postgres_parquet_verified.json
       - name: Check artifact has actual PASS
         run: python -c "import json; j=json.load(open('reports/live_postgres_parquet_verified.json')); assert j['status']=='PASS' and not j['simulation'] and j['dbt_executed']"
-      - uses: actions/upload-artifact@v4
+      - name: Upload platform proof in flat layout for acceptance gate
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: sunset-proof-platform
+          path: reports/live_postgres_parquet_verified.json
+          if-no-files-found: error
+      - name: Preserve dbt diagnostics separately from acceptance proofs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sunset-dbt-diagnostics
           path: |
-            reports/live_postgres_parquet_verified.json
             dbt/target/run_results.json
             dbt/target/manifest.json
           if-no-files-found: warn
