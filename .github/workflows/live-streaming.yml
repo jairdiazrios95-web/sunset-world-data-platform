@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 40
     env:
+      PYTHONPATH: ${{ github.workspace }}
       POSTGRES_DB: sunset
       POSTGRES_USER: sunset
       POSTGRES_PASSWORD: ci_local_only_2026
