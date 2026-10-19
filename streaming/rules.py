@@ -1,6 +1,7 @@
 """Shared alert rules for tests and Spark streaming policy evaluation.
 These are synthetic policy examples, NOT Sunset World approved forbidden phrases.
 """
+from __future__ import annotations
 import re
 from dataclasses import dataclass
 
