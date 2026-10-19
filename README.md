@@ -4,10 +4,7 @@
 > commit `2d42784`. Corresponde a servicios reales con **datos sintéticos**;
 > no implica certificación de producción.
 >
-> **Volumetría PostgreSQL:** carga física de **42.8 millones** en curso en
-> [ejecución #39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627)
-> (rama `stress/pg-42m-20261019`). No se declara `PASS` hasta descargar su
-> artifact, comprobar los conteos y confirmar que terminó correctamente.
+> **Volumetría PostgreSQL — PASS real:** [ejecución #39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627) (rama `stress/pg-42m-20261019`, commit `0f6b568`). **42,800,000 filas sintéticas** cargadas y conciliadas físicamente (9 M leads, 13.8 M pagos, 20 M comentarios), en **436.102 segundos**, con 0 huérfanos y replay sin duplicados. Es una prueba relacional en PostgreSQL, no 42.8 M end-to-end en todos los motores.
 > Oracle 11g real, API Mantis corporativa y criterios de VPG siguen pendientes
 > de accesos y definiciones del negocio.
 >

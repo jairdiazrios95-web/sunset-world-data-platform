@@ -4,7 +4,7 @@
 
 - [x] [CI de aceptación 39332219848](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39332219848) — SHA `2d42784bea44ab3ead74d71cfb275401fb762d08`. Jobs PostgreSQL/Parquet/dbt/pgvector, MinIO, Kafka/Spark, Airflow, RAG y aceptación **SUCCESS**. Siete artifacts descargables de la misma ejecución. Datos de prueba sintéticos.
 - [x] Integración PyArrow↔PostgreSQL y repetición sin duplicados, eventos Kafka↔Spark↔PostgreSQL, Airflow DAG real, modelo de embeddings↔pgvector, y subida/descarga MinIO comprobados en CI.
-- [ ] [PostgreSQL físico con 42.8 millones](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627) — se inició ejecución real, **pendiente de verificar el resultado**. Es una prueba exclusivamente de capacidad PostgreSQL/FK/idempotencia, **no 42.8M end-to-end en todos los motores**.
+- [x] [PostgreSQL físico con 42.8 millones](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627), SHA `0f6b568`: **PASS verificado** (9M leads, 13.8M pagos, 20M comentarios; 0 huérfanos, replay estable, 436.102 s, 3,203,054,615 bytes de base). Es una prueba relacional, **no 42.8M end-to-end**.
 
 ## Restricciones explicadas con precisión
 
@@ -14,7 +14,7 @@
 
 ## Revisión previa al correo
 
-- [ ] Confirmar resultado, tiempos, uso de disco y conteos reales del benchmark 42.8M; si agota recursos, registrar BLOCKED y el límite comprobado, sin inventar PASS.
+- [x] Confirmados conteos, bytes PostgreSQL y resultado del benchmark 42.8M en la ejecución #39334943627; artifact conservado en GitHub.
 - [ ] Validar PR de hardening y ejecutar CI en el SHA definitivo de `main`.
 - [ ] Revisar PDF `deliverables/Sunset_World_Respuestas_Examen.pdf` y `deliverables/Sunset_World_Presentacion_Ejecutiva.pptx` frente al SHA final: pueden contener textos anteriores a las pruebas de GitHub. No presentarlos como actualizados hasta regenerarlos y verificar.
 - [ ] Preparar y comprobar el enlace de repositorio privado para evaluadores autorizados. **No** abrir el repo público ni compartir tokens.
