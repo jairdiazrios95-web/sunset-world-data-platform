@@ -15,10 +15,10 @@
 ## Revisión previa al correo
 
 - [x] Confirmados conteos, bytes PostgreSQL y resultado del benchmark 42.8M en la ejecución #39334943627; artifact conservado en GitHub.
-- [ ] Validar PR de hardening y ejecutar CI en el SHA definitivo de `main`.
+- [x] PR de hardening integrado y CI final aprobado en `main` (SHA `cbe4c38`, Actions #39336589227).
 - [ ] Revisar PDF `deliverables/Sunset_World_Respuestas_Examen.pdf` y `deliverables/Sunset_World_Presentacion_Ejecutiva.pptx` frente al SHA final: pueden contener textos anteriores a las pruebas de GitHub. No presentarlos como actualizados hasta regenerarlos y verificar.
 - [ ] Preparar y comprobar el enlace de repositorio privado para evaluadores autorizados. **No** abrir el repo público ni compartir tokens.
-- [ ] Determinar si la opción comunicativa exige diapositivas **o** video; el guion existe, pero el MP4 real no se ha verificado.
+- [x] Opción comunicativa: presentación de cinco diapositivas y guion; no se declara video MP4.
 - [ ] Redactar correo con evidencia accesible, alcance exacto, limitaciones y destinatarios confirmados.
 
 ## Procedimiento de evidencia

@@ -17,6 +17,8 @@
 
 **Solución propuesta al examen técnico Data Engineer de Sunset World**, documentada contra el PDF recibido. Desarrollada como una plataforma modular con Python, Parquet, PostgreSQL/pgvector, Airflow 2, dbt, Kafka y Spark Structured Streaming. **No es un repositorio oficial ni contiene datos corporativos.**
 
+**Entrega actualizada (19-oct-2026):** [Aceptación real 5/5 en main](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39336589227) (SHA `cbe4c38`) y [estrés PostgreSQL físico 42.8M](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627) (SHA `0f6b568`, 436.102 s, 0 huérfanos). **No** es una carga end-to-end de 42.8M por todos los motores. La API corporativa Mantis/Oracle no está verificada.
+
 **Documento principal:** [Respuestas al examen PDF](deliverables/Sunset_World_Respuestas_Examen.pdf) | [Presentación ejecutiva (5 diapositivas)](deliverables/Sunset_World_Presentacion_Ejecutiva.pptx) | [Guion de video](docs/VIDEO_SCRIPT.md)
 
 ## Arquitectura (opción A aprobada)
