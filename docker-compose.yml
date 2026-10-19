@@ -46,6 +46,8 @@ services:
       SUNSET_PROJECT_ROOT: /opt/airflow/project
       PYTHONPATH: /opt/airflow/project
       DEMO_SOURCE_MODE: csv
+      SUNSET_AIRFLOW_RETRIES: ${SUNSET_AIRFLOW_RETRIES:-3}
+      SUNSET_AIRFLOW_RETRY_SECONDS: ${SUNSET_AIRFLOW_RETRY_SECONDS:-300}
       SUNSET_PG_DSN: postgresql://${POSTGRES_USER:-sunset}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sunset}
       PGHOST: postgres
       PGPORT: "5432"

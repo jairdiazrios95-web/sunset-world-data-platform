@@ -7,7 +7,7 @@ permissions:
   contents: read
 concurrency:
   group: sunset-real-acceptance-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   platform:
     uses: ./.github/workflows/live-platform.yml

@@ -43,7 +43,9 @@ def run(*args):
     return result.stdout[-8000:]
 
 DEFAULT_ARGS={
- 'owner':'sunset-data-platform','retries':3,'retry_delay':timedelta(minutes=5),
+ 'owner':'sunset-data-platform',
+ 'retries':int(os.getenv('SUNSET_AIRFLOW_RETRIES','3')),
+ 'retry_delay':timedelta(seconds=int(os.getenv('SUNSET_AIRFLOW_RETRY_SECONDS','300'))),
  'sla':timedelta(hours=2), 'email_on_failure':bool(os.getenv('ALERT_EMAIL')),
  'email':os.getenv('ALERT_EMAIL',''), 'on_failure_callback':alert
 }

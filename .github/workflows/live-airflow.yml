@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     env:
+      SUNSET_AIRFLOW_RETRIES: '0'
+      SUNSET_AIRFLOW_RETRY_SECONDS: '1'
       POSTGRES_DB: sunset
       POSTGRES_USER: sunset
       POSTGRES_PASSWORD: ci_local_only_2026
