@@ -1,17 +1,28 @@
 name: sunset-real-postgresql-volume-stress
 on:
+  push:
+    branches: [stress/pg-42m-20261019]
+    paths:
+      - '.github/workflows/live-volume.yml'
+      - 'stress/postgres_live_stress.py'
+      - 'tests/test_postgres_stress_v07.py'
+      - 'config/stress_pg.json'
   workflow_dispatch:
     inputs:
       profile:
-        description: 'smoke (~45k), reference (~21.4M), double (~42.8M). Large profiles may exceed hosted runner storage/time.'
+        description: 'PostgreSQL physical load: smoke / reference (21.4 M) / double (42.8 M)'
         type: choice
         required: true
-        default: smoke
+        default: double
         options: [smoke, reference, double]
 permissions:
   contents: read
+concurrency:
+  group: physical-volume-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   pg-stress:
+    name: Physical PostgreSQL load with FK, replay and measured storage
     runs-on: ubuntu-22.04
     timeout-minutes: 240
     services:
@@ -21,28 +32,71 @@ jobs:
           POSTGRES_USER: sunset
           POSTGRES_PASSWORD: ci_local_only_2026
           POSTGRES_DB: sunset
-        ports: [5432:5432]
+        ports:
+          - 5432:5432
         options: >-
-          --health-cmd 'pg_isready -U sunset -d sunset'
+          --health-cmd "pg_isready -U sunset -d sunset"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 25
     env:
       SUNSET_PG_DSN: postgresql://sunset:ci_local_only_2026@localhost:5432/sunset
+      STRESS_PROFILE: ${{ inputs.profile || 'double' }}
+      PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install actual PostgreSQL adapter
-        run: python -m pip install 'psycopg[binary]==3.2.6'
-      - name: Check available storage capacity
-        run: df -h / /var/lib/docker
-      - name: Run physical PostgreSQL volume, FK and replay verification
-        run: python stress/postgres_live_stress.py --profile '${{ inputs.profile }}' --report reports/live_pg_stress.json
-      - uses: actions/upload-artifact@v4
+      - name: Install PostgreSQL adapter and unit test runner
+        run: python -m pip install 'psycopg[binary]==3.2.6' 'pytest==8.3.5'
+      - name: Check benchmark SQL escaping and configuration
+        run: python -m pytest -q tests/test_postgres_stress_v07.py
+      - name: Smoke test with physical PostgreSQL rows and replay
+        run: python stress/postgres_live_stress.py --profile smoke --batch-size 10000 --report reports/live_pg_smoke.json
+      - name: Reset smoke data before large-volume test
+        run: |
+          python - <<'PY'
+          import os, psycopg
+          with psycopg.connect(os.environ['SUNSET_PG_DSN'], autocommit=True) as conn:
+              conn.execute('DROP SCHEMA IF EXISTS stress CASCADE')
+          print('Smoke data removed: full load will start from an empty stress schema')
+          PY
+      - name: Record runner capacity before workload
+        run: |
+          df -h / /var/lib/docker
+          free -h
+      - name: Load physical PostgreSQL rows, verify foreign keys and replay
+        run: |
+          python stress/postgres_live_stress.py \
+            --profile "$STRESS_PROFILE" \
+            --batch-size 100000 \
+            --report reports/live_pg_stress.json
+      - name: Fail closed unless ALL target rows and replay match
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          targets = json.loads(Path('config/stress_pg.json').read_text())['profiles'][os.environ['STRESS_PROFILE']]
+          evidence = json.loads(Path('reports/live_pg_stress.json').read_text())
+          assert evidence['status']=='PASS' and evidence['simulation'] is False
+          assert evidence['targets']==targets
+          assert all(evidence['counts'][name]['rows']==count and evidence['counts'][name]['replay_rows']==count
+                     for name,count in targets.items())
+          assert not any(evidence['orphans'].values())
+          print('ACTUAL POSTGRESQL STRESS PASS:',sum(targets.values()),'rows; profile',os.environ['STRESS_PROFILE'])
+          PY
+      - name: Report runner capacity after workload
+        if: always()
+        run: |
+          df -h / /var/lib/docker
+          free -h
+      - name: Upload measured physical load reports
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sunset-proof-real-postgres-volume-${{ inputs.profile }}
-          path: reports/live_pg_stress.json
+          name: sunset-postgres-physical-volume-${{ env.STRESS_PROFILE }}-${{ github.run_id }}
+          path: |
+            reports/live_pg_smoke.json
+            reports/live_pg_stress.json
           if-no-files-found: warn
