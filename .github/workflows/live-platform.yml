@@ -22,6 +22,7 @@ jobs:
           --health-timeout 5s
           --health-retries 30
     env:
+      PYTHONPATH: ${{ github.workspace }}
       SUNSET_PG_DSN: postgresql://sunset:ci_local_only_2026@localhost:5432/sunset
       PGHOST: localhost
       PGPORT: 5432
