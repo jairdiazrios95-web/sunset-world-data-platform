@@ -39,7 +39,9 @@ def alert(context):
 def run(*args):
     result=subprocess.run(args,cwd=ROOT,capture_output=True,text=True,timeout=7200)
     if result.returncode:
-        raise AirflowException(f'Command failed ({args[0]}): {result.stderr[-2500:]}')
+        raise AirflowException(
+            f'Command failed ({args[0]}) with code {result.returncode}; '
+            f'STDOUT: {result.stdout[-3500:]}; STDERR: {result.stderr[-3500:]}')
     return result.stdout[-8000:]
 
 DEFAULT_ARGS={

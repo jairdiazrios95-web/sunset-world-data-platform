@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     env:
+      PYTHONPATH: ${{ github.workspace }}
       POSTGRES_PASSWORD: ci_local_only_2026
       GRAFANA_ADMIN_PASSWORD: ci_local_only_2026
       MINIO_ROOT_USER: ci_local_user
