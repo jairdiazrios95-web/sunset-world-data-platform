@@ -144,9 +144,7 @@ def test_streaming_sink_executes_both_alert_and_nonalert_upserts(monkeypatch):
 
 def test_real_streaming_verifier_requires_ack_and_replay(monkeypatch, tmp_path):
     from scripts import verify_streaming_live as m
-    from streaming.producer import make_events
     collection = []
-    events = make_events("CI-SIM", "2026-01-01T00:00:00Z")
     class Message:
         def __init__(self, topic, payload):
             self._topic, self._payload = topic, payload
@@ -203,8 +201,6 @@ def test_real_streaming_verifier_requires_ack_and_replay(monkeypatch, tmp_path):
                                               KafkaException=Exception))
     monkeypatch.setattr(m.time, "sleep", lambda _: None)
     monkeypatch.setenv("SUNSET_PG_DSN", "temporary")
-    from streaming import producer as raw_producer
-    monkeypatch.setattr(raw_producer, "make_events", lambda *_a: events)
     result = m.verify(5, tmp_path/"streaming.json")
     assert result["status"] == "PASS"
     assert result["processed_topic_events"] == 5
