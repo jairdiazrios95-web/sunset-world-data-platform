@@ -4,6 +4,7 @@ on:
     branches: [main, quality/sonarqube-ready-20261019]
     paths:
       - '.github/workflows/quality-sonarqube.yml'
+      - '.github/workflows/ephemeral-sonarqube.yml'
       - 'sonar-project.properties'
       - 'sunset/**'
       - 'warehouse/**'
@@ -34,7 +35,7 @@ jobs:
       - name: Block high-confidence high-severity security defects
         run: python -m bandit -r sunset warehouse oracle rag streaming airflow/dags scripts stress --severity-level high --confidence-level high --format json --output bandit-high.json
       - name: Run regression tests and produce measured coverage
-        run: python -m pytest -q tests --cov=sunset --cov=warehouse --cov=oracle --cov=rag --cov=streaming --cov=airflow/dags --cov=scripts --cov=stress --cov-report=xml:coverage.xml --cov-report=term
+        run: python -m pytest -q tests --cov=sunset --cov=warehouse --cov=oracle --cov=rag --cov=streaming --cov=airflow/dags --cov=scripts --cov=stress --cov-report=xml:coverage.xml --cov-report=term --cov-fail-under=90
       - name: Save measurable security and coverage reports
         uses: actions/upload-artifact@v4
         if: always()
