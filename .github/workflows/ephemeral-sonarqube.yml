@@ -70,7 +70,25 @@ jobs:
           test -n "$SONAR_TOKEN"
           echo "::add-mask::$SONAR_TOKEN"
           echo "SONAR_TOKEN=$SONAR_TOKEN" >> "$GITHUB_ENV"
+      - name: Set strict and non-empty SonarQube Quality Gate on total coverage
+        run: |
+          curl -fsS -u admin:admin -X POST \
+            --data-urlencode 'name=Sunset Strict CI Gate' \
+            "$SONAR_HOST_URL/api/qualitygates/create" > /dev/null
+          curl -fsS -u admin:admin -X POST \
+            --data-urlencode 'gateName=Sunset Strict CI Gate' \
+            --data-urlencode 'metric=coverage' \
+            --data-urlencode 'op=LT' \
+            --data-urlencode 'error=90' \
+            "$SONAR_HOST_URL/api/qualitygates/create_condition" > /dev/null
+          curl -fsS -u admin:admin -X POST \
+            --data-urlencode 'gateName=Sunset Strict CI Gate' \
+            --data-urlencode 'projectKey=sunset-world-data-platform' \
+            "$SONAR_HOST_URL/api/qualitygates/select" > /dev/null
+          echo "Actual server gate is now: total coverage at least 90%"
       - name: Analyze code with actual SonarScanner and enforce actual server Quality Gate
+        id: sonar_scan
+        continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v5.3.1
         with:
           args: >-
@@ -80,7 +98,7 @@ jobs:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
       - name: Query SonarQube analysis and coverage API for evidence
-        if: success()
+        if: always()
         run: |
           curl -fsS -H "Authorization: Bearer $SONAR_TOKEN" \
             "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=sunset-world-data-platform" \
@@ -88,13 +106,20 @@ jobs:
           curl -fsS -H "Authorization: Bearer $SONAR_TOKEN" \
             "$SONAR_HOST_URL/api/measures/component?component=sunset-world-data-platform&metricKeys=coverage,bugs,vulnerabilities,code_smells" \
             | tee sonar-measures.json
+          curl -fsS -H "Authorization: Bearer $SONAR_TOKEN" \
+            "$SONAR_HOST_URL/api/issues/search?componentKeys=sunset-world-data-platform&ps=100" \
+            > sonar-issues.json
           python - <<'PY'
           import json
           gate=json.load(open('sonar-gate.json'))['projectStatus']['status']
           measures=json.load(open('sonar-measures.json'))['component']['measures']
-          assert gate == 'OK', f'SonarQube Quality Gate: {gate}'
-          print('REAL SONARQUBE QUALITY GATE:',gate)
-          print('MEASURED METRICS:',[(x['metric'], x.get('value')) for x in measures])
+          measured = {x['metric']: float(x.get('value', 0)) for x in measures}
+          print('REAL SONARQUBE QUALITY GATE:', gate)
+          print('MEASURED METRICS:', measured)
+          assert gate == 'OK', f'SonarQube strict Quality Gate: {gate}'
+          assert measured.get('coverage', 0) >= 90, 'Actual total coverage below 90%'
+          assert measured.get('bugs', 0) == 0, 'SonarQube found bugs'
+          assert measured.get('vulnerabilities', 0) == 0, 'SonarQube found vulnerabilities'
           PY
       - name: Publish SonarQube server proof
         if: always()
@@ -105,6 +130,7 @@ jobs:
             coverage.xml
             sonar-gate.json
             sonar-measures.json
+            sonar-issues.json
           if-no-files-found: warn
       - name: Diagnoses on failure
         if: failure()
