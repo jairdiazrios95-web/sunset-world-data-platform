@@ -110,7 +110,6 @@ services:
     depends_on:
       kafka: {condition: service_started}
       postgres: {condition: service_healthy}
-    user: root
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SUNSET_PG_DSN: postgresql://${POSTGRES_USER:-sunset}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sunset}

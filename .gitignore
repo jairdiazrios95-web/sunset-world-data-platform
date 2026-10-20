@@ -8,24 +8,21 @@ __pycache__/
 venv/
 *.egg-info/
 .DS_Store
-data/parquet/
-data/volume/
-data/generada/
-data/staging/
+/data/parquet/
+/data/volume/
+/data/generada/
+/data/staging/
+/data/stress/
 data/**/_manifest.json
-reports/runs/
+/reports/
+/deliverables/
 *.log
 .ipynb_checkpoints/
 *.mp4.tmp
-
-# No multi-million row test data or local databases in Git
-/data/stress/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 *.sqlite-journal
-
-# Never commit release bundles, test credentials or local container state
 Sunset_World_Arquitectura_*.zip
 *.pem
 *.p12

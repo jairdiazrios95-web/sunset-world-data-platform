@@ -41,7 +41,8 @@ def test_oracle_allowlist():
 
 def test_oracle_stable_interval_id():
     a=datetime(2025,1,1,tzinfo=timezone.utc);b=datetime(2025,1,2,tzinfo=timezone.utc)
-    assert interval_run_id('fx_historico',a,b)==interval_run_id('fx_historico',a,b)
+    local_zone = timezone(timedelta(hours=-6))
+    assert interval_run_id('fx_historico',a,b)==interval_run_id('fx_historico',a.astimezone(local_zone),b.astimezone(local_zone))
     assert interval_run_id('fx_historico',a,b)!=interval_run_id('leads_ventas',a,b)
 
 def test_rag_redaction_and_change_tracking():

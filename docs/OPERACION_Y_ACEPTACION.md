@@ -1,43 +1,38 @@
-# Runbook de aceptación, seguridad y operación
+# Operación y aceptación · plataforma técnica vigente
 
-## 1. Arranque local
+## Requisitos
+Python 3.11, Docker + Docker Compose (solo integraciones). Los datos versionados en `data/sample/` son sintéticos. No copiar contraseñas a Git.
 
-1. `cp .env.example .env` y sustituir contraseñas de ejemplo por secretos generados. No versionar `.env`.
-2. `python -m pip install -r requirements.txt` (entorno Python 3.11 con internet).
-3. `make demo`: prueba unitaria + integridad/CSV + calidad local.
-4. `python -m sunset.cli generate --profile sample --output data/sample` solo si deseas regenerar fixtures con semilla de configuración.
-5. `python -m sunset.parquet --input data/sample --output data/parquet --config config/pipeline.json` y verificar `_manifest.json` para cada fuente.
-6. `docker compose --profile warehouse up -d postgres` después de `docker compose config`.
-7. `export SUNSET_PG_DSN=postgresql://<usuario>:<password>@localhost:5432/sunset`; para cada fuente (`clientes`, `leads_ventas`, `tours`, `contratos`, `pagos`, `comentarios`, `fx_historico`, `salas`, `fuentes`, `productos`) ejecutar `python -m warehouse.load_parquet --source FUENTE --lake data/parquet`.
-8. `python -m warehouse.build_marts` y comprobar `status: PASS` y conteos reconciliados.
-9. Instalar `dbt-postgres==1.9.0`, exportar `PGHOST`, `PGPASSWORD`, etc. y ejecutar `dbt run --project-dir dbt --profiles-dir dbt && dbt test --project-dir dbt --profiles-dir dbt`.
-10. `docker compose --profile airflow up -d airflow`: en Airflow 2.10.x habilitar `etl_sunset` cuando el servidor PostgreSQL esté listo. Airflow standalone es un atajo de demo, no despliegue productivo.
-11. Para Kafka: `docker compose --profile streaming up -d kafka`; crear topics con `docker compose exec kafka bash /work/streaming/init_topics.sh`, instalar dependencia Kafka y simular con `python -m streaming.producer`. Spark tiene una imagen propia con `psycopg`; antes de usarlo como prueba real, revisar `docker logs` y asegurar que el worker resuelve ambos.
-12. Para RAG: instalar requirements de IA y ejecutar `python -m rag.build_embeddings --lake data/parquet`, luego `python -m rag.search 'Consulta de ejemplo'`.
+## Prueba base
+```bash
+python -m pip install -r requirements.txt
+python -m pytest -q tests
+python -m sunset.quality --input data/sample --scope full --report reports/quality_local.json
+python -m sunset.offline_demo --input data/sample --report reports/offline_demo_verified.json
+```
 
-## 2. Matriz de aprobación
+## Contenedores y perfiles
+```bash
+cp .env.example .env  # modificar secretos locales
+docker compose config
+docker compose --profile warehouse up -d postgres
+docker compose --profile streaming up -d --build postgres kafka
+docker compose exec kafka bash /work/streaming/init_topics.sh
+docker compose --profile streaming up -d --build spark
+```
 
-| Gate | Condición verificable |
-|---|---|
-| Calidad de fuentes | `sunset.quality` PASS y no PK/FK inválidas |
-| Parquet | Conteos CSV == suma metadata rowgroups == manifest; particiones ISO correctas |
-| Reejecución | Mismo conteo de PK y contenido publicado sin duplicados |
-| PostgreSQL | Tablas `raw` contienen exactamente las PK de snapshot; hechos=origen válido |
-| Airflow | Dos fuentes core ejecutan en paralelo, downstream dbt/quality esperan ambas |
-| Alertas | Inyectar error y comprobar webhook/email con secreto autorizado |
-| Kafka | Orden estable por llamada a nivel partición, replays por event_id idempotentes |
-| Streaming | Alerta esperada y evento normal almacenado sin duplicarse tras restart |
-| RAG | Primer ciclo embebe; segundo ciclo con mismo hash genera 0 embeddings nuevos |
-| Carga | Medir RSS, bytes, CPU, latencia y rows/s en hardware identificado |
-| Seguridad | `.env` ausente de Git, credenciales no impresas, PII de demo únicamente |
+Otros perfiles disponibles: `lake` (MinIO), `airflow`, `rag`, `monitoring`, `full`. Su puesta en marcha requiere recursos y redes compatibles. No usar `docker compose down -v` sobre datos reales.
 
-## 3. Riesgos abiertos
+## Evidencias actuales y condiciones
+La [aceptación real #39357820940](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820940) aprobó los cinco jobs: PostgreSQL/Parquet/dbt, MinIO, Airflow, Kafka/Spark y RAG, más la compuerta agregada, usando datos sintéticos. La [ejecución real de SonarQube #39357820932](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820932) reportó 91.1% cobertura y Quality Gate OK. **Resultados correspondientes al commit evaluado entonces; deben renovarse si cambia el código o las pruebas.**
 
-- `pyarrow`/PostgreSQL/Docker/Kafka/Airflow/Spark/pgvector no probados en el entorno de creación: no declararlos productivos.
-- Existen diferencias de compatibilidad entre Airflow 2, dependencias dbt, Java/Spark, imagen de Kafka y soporte de paquetes. Validar `docker compose config`, build e integración antes de entregar.
-- Archivo de `/docker-entrypoint-initdb.d` de Postgres corre **solo al crear por primera vez** el volumen: para una base existente, ejecutar migraciones manuales o recrear un volumen de demo (con cuidado de datos).
-- Modelo de embeddings escogido como propuesta de 384 dimensiones, sujetos a licencia, precisión en español y disponibilidad de descarga.
-- Publicaciones Parquet con `rename` solo garantizan reemplazo local dentro de un filesystem; S3 necesita control de versión/manifest o Iceberg.
-- Actualizar el watermark del consumidor únicamente después de su propio commit, no al extraer del origen.
-- No incluir grandes archivos de carga en Git; usar perfiles y manifestos.
-- La disponibilidad real de Mantis es desconocida; no inventar URL/API.
+Las CI generan evidencia JSON e informes en `reports/` y los publican en *GitHub Actions artifacts*. La carpeta local `reports/` no está versionada.
+
+## Restricciones explícitas
+- Oracle 11g corporativo: pendiente servidor, acceso autorizado, librerías y esquema validado.
+- Mantis: endpoint y contrato corporativo desconocidos.
+- VPG, conversión y privacidad: requieren criterios de negocio, autorización y gobierno.
+- Spark/Kafka tiene semántica *at-least-once*; replay mediante `event_id`, no exactly-once global.
+- Publicación Parquet en disco local y transacciones de objetos S3 no son equivalentes.
+- La prueba de 42.8M corresponde **solo** a PostgreSQL relacional, no al flujo completo.
+- Airflow en `standalone` es demostrativo, no un despliegue de alta disponibilidad.
