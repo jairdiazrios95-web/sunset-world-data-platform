@@ -30,13 +30,21 @@ jobs:
           chmod -R a+rwX reports dbt/target dbt/logs data/parquet
       - name: Build and launch real Apache Airflow 2 with PostgreSQL
         run: docker compose --profile airflow up -d --build airflow
-      - name: Wait for Airflow metadata database readiness
+      - name: Wait for Airflow metadata schema to finish migrations
         run: |
-          for x in $(seq 1 75); do
-            if docker compose exec -T airflow airflow db check; then exit 0; fi
+          # airflow db check only verifies a network connection. 'standalone'
+          # bootstraps/migrates the metadata DB asynchronously; the second
+          # independent run exposed a race in 'airflow dags list'.
+          for x in $(seq 1 90); do
+            if docker compose exec -T airflow airflow db check-migrations -t 10; then
+              echo 'Airflow metadata schema migrations complete'
+              exit 0
+            fi
             sleep 4
           done
-          echo 'Airflow did not start'; exit 1
+          echo 'Airflow metadata migrations failed or timed out'
+          docker compose --profile airflow logs --tail=100 airflow
+          exit 1
       - name: Fix named volume permissions inside disposable CI containers
         run: |
           docker compose exec -T -u root airflow sh -c 'mkdir -p /opt/airflow/project/reports /opt/airflow/project/data/parquet /opt/airflow/project/dbt/target && chmod -R a+rwX /opt/airflow/project/reports /opt/airflow/project/data/parquet /opt/airflow/project/dbt/target'
