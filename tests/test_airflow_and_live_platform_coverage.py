@@ -72,6 +72,7 @@ def test_airflow_dag_taskflow_success_and_all_failure_branches(monkeypatch, tmp_
         if "warehouse.build_marts" in args:
             return json.dumps({"status":"PASS", "row_counts":{"dw.fact_ventas":3}})
         return "checked"
+    original_run = module.run
     monkeypatch.setattr(module,"run",run)
     leads=registry["ingest_source"]("leads_ventas")
     fx=registry["ingest_source"]("fx_historico")
@@ -101,6 +102,7 @@ def test_airflow_dag_taskflow_success_and_all_failure_branches(monkeypatch, tmp_
     with pytest.raises(json.JSONDecodeError):
         registry["ingest_source"]("leads_ventas")
     # Exercise subprocess logging, nonzero exit and optional alert callback.
+    monkeypatch.setattr(module, "run", original_run)
     class Process:
         returncode=0
         stdout="success"*1000
