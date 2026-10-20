@@ -65,7 +65,7 @@ def test_verifier_clis_parse_args_and_emit_json(tmp_path,monkeypatch,capsys):
 
 def test_offline_services_main_real_sqlite_idempotent(tmp_path,monkeypatch,capsys):
     source=tmp_path/"comments.csv"
-    source.write_text("comentario_id,texto\\nC1,Excelente atención\\nC2,Información de pagos\\n")
+    source.write_text("comentario_id,texto\nC1,Excelente atención\nC2,Información de pagos\n")
     report=tmp_path/"offline.json"
     monkeypatch.setattr(sys,"argv",["offline-services","--comments",str(source),
         "--db",str(tmp_path/"events.sqlite"),"--report",str(report)])
