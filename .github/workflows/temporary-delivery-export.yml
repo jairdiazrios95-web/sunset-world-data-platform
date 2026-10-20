@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Pack verified base source tree
         run: |
           git archive --format=zip --output=Sunset_World_Codigo_9761ade.zip 9761ade5639f21d6567e8a7986e362c01ed098ff
