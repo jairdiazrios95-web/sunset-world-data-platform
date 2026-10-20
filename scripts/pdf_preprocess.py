@@ -7,9 +7,18 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import re
-
-SEPARATOR = re.compile(r'^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$')
+def is_separator(line: str) -> bool:
+    """Check Markdown table separators in linear time without regex backtracking."""
+    if not line.lstrip().startswith("|"):
+        return False
+    parts = [part.strip() for part in line.strip().strip("|").split("|")]
+    if len(parts) < 2:
+        return False
+    for part in parts:
+        value = part.removeprefix(":").removesuffix(":")
+        if len(value) < 3 or any(char != "-" for char in value):
+            return False
+    return True
 
 
 def cells(line: str) -> list[str]:
@@ -29,7 +38,7 @@ def prepare(markdown: str) -> str:
             i += 1
             continue
         if (not fenced and line.lstrip().startswith('|')
-                and i + 1 < len(lines) and SEPARATOR.fullmatch(lines[i + 1])):
+                and i + 1 < len(lines) and is_separator(lines[i + 1])):
             labels = cells(line)
             i += 2
             out.append('')

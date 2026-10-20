@@ -29,7 +29,8 @@ def test_chunk_overlap_and_validation():
 
 def test_streaming_event_id_replay():
     args=('call-1',17,'test','2026-01-01T00:00:00Z')
-    assert build_event(*args)['event_id']==build_event(*args)['event_id']
+    assert build_event(*args)['event_id']==build_event('call-1',17,'new text','2026-10-19T00:00:00Z')['event_id']
+    assert build_event(*args)['event_id']!=build_event('call-1',18,'test','2026-01-01T00:00:00Z')['event_id']
 
 
 def test_config_rejects_non_synthetic_and_bad_numeric_types(tmp_path):
