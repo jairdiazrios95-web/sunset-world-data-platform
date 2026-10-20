@@ -75,7 +75,8 @@ def test_minio_live_roundtrip_and_mismatch(tmp_path, monkeypatch):
     assert result["parquet_rows"] == 4
     assert len(result["objects"]) == 2
     assert json.loads(report.read_text())["status"] == "PASS"
-    assert sha256_file(report) == sha256_file(report)
+    import hashlib
+    assert sha256_file(report) == hashlib.sha256(report.read_bytes()).hexdigest()
     client.corrupt = True
     with pytest.raises(AssertionError, match="SHA-256 mismatch"):
         verify(tmp_path, report)

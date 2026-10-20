@@ -38,7 +38,7 @@ def extract_rows(table, watermark, fetch_size=5000):
             # Table name is strictly validated against the declared allowlist;
             # Oracle table identifiers cannot be SQL bind parameters.
             query = (
-                f'SELECT * FROM {schema_table} '
+                f'SELECT * FROM {schema_table} '  # NOSONAR: regex + explicit allowlist; Oracle cannot bind table names
                 'WHERE UPDATED_AT >= :watermark ORDER BY UPDATED_AT'
             )
             cur.execute(query, watermark=watermark)  # NOSONAR: validated allowlist

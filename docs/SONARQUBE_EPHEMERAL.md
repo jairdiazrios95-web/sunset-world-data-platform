@@ -15,3 +15,21 @@ managed URL + token.
 The 90% coverage target applies to the **same repository-wide Python
 statement denominator** (all modules in the original `--cov` arguments).
 No modules are excluded to inflate results.
+
+## Explicitly reviewed S3 compatibility exception (S7608)
+
+Sonar rule `python:S7608` requires AWS `ExpectedBucketOwner` (an AWS account
+ID) on S3 calls. This deployment uses **MinIO**, not AWS S3, and has no AWS
+owner-account ID. Passing an invented ID would either break MinIO or create
+misleading security. We narrowly suppress S7608 for `sunset/minio.py` and
+`scripts/verify_minio_live.py` only; the original findings and justification
+remain in this document. The exclusion is **not** a claim of production-grade
+bucket authorization or identity-based access control. MinIO IAM policies,
+least-privilege credentials and TLS must be assessed with the actual host.
+
+The Oracle query uses a validated uppercase SQL identifier and an explicit
+allowlist because Oracle 11g does not allow binding a table name. Its local
+`NOSONAR` comment documents the reviewed identifier-only interpolation;
+credentials and watermarks remain bound/separate. The streaming image now
+builds as root only for installation and runs as non-root UID 185. Revalidate
+all Spark CI jobs before merging.
