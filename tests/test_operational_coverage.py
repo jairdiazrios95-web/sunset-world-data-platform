@@ -37,7 +37,9 @@ class Cursor:
             self.answer = None
         elif "to_regclass" in sql:
             self.answer = ("raw.table",)
-        elif "SELECT count" in sql.lower() or "SELECT COUNT" in sql:
+        elif "WHERE d.cliente_key IS NULL" in sql:
+            self.answer = (0,)
+        elif "select count" in sql.lower():
             table = sql.split("FROM")[-1].strip().split()[0]
             self.answer = (self.counts.get(table, 10),)
         else:
@@ -94,7 +96,8 @@ def test_minio_manifest_pointer_publishes_only_after_uploads(tmp_path, monkeypat
             assert data["status"] == "COMPLETE"
             assert data["file_count"] == 1
             objects.append((Bucket, Key))
-    monkeypatch.setattr("boto3.client", lambda *_a, **_k: S3())
+    monkeypatch.setitem(sys.modules, "boto3",
+                        types.SimpleNamespace(client=lambda *_a, **_k: S3()))
     monkeypatch.setenv("MINIO_ROOT_USER", "ephemeral")
     monkeypatch.setenv("MINIO_ROOT_PASSWORD", "ephemeral")
     folder = tmp_path/"year=2024"/"month=01"
@@ -213,7 +216,12 @@ def test_cli_actions_take_config_and_invoke_correct_boundary(monkeypatch, tmp_pa
     monkeypatch.setattr(cli, "convert", lambda *a, **k: (calls.append(("parquet", a)), {"rows": 2})[1])
     monkeypatch.setattr(sys, "argv", ["sunset", action, "--profile", "sample",
                                      "--output", str(tmp_path/"out")])
-    cli.main()
+    if action == "audit":
+        with pytest.raises(SystemExit) as exc:
+            cli.main()
+        assert exc.value.code == 0
+    else:
+        cli.main()
     assert capsys.readouterr().out.strip().startswith("{")
     if action != "check-config":
         assert calls[0][0] == action
