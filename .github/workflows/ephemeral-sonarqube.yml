@@ -1,0 +1,119 @@
+name: sunset-real-ephemeral-sonarqube
+on:
+  push:
+    branches: [quality/sonarqube-ready-20261019]
+    paths:
+      - '.github/workflows/ephemeral-sonarqube.yml'
+      - 'sonar-project.properties'
+      - 'tests/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ephemeral-server:
+    name: Real SonarQube Community analysis and Quality Gate
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    env:
+      SONAR_HOST_URL: http://127.0.0.1:9000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate genuine Python test coverage
+        run: |
+          python -m pip install pytest==8.3.5 pytest-cov==6.0.0 PyYAML==6.0.2
+          python -m pytest -q tests --cov=sunset --cov=warehouse --cov=oracle --cov=rag --cov=streaming --cov=airflow/dags --cov=scripts --cov=stress --cov-report=xml:coverage.xml
+      - name: Prepare kernel and isolated database
+        run: |
+          sudo sysctl -w vm.max_map_count=524288
+          sudo sysctl -w fs.file-max=131072
+          docker network create sonar-ci
+          docker run -d --name sonar-ci-db --network sonar-ci \
+            -e POSTGRES_USER=sonar -e POSTGRES_PASSWORD=sonar_ci_ephemeral_only \
+            -e POSTGRES_DB=sonar postgres:16-alpine
+      - name: Start actual SonarQube Community server
+        run: |
+          docker run -d --name sonar-ci --network sonar-ci \
+            -p 127.0.0.1:9000:9000 \
+            -e SONAR_JDBC_URL=jdbc:postgresql://sonar-ci-db:5432/sonar \
+            -e SONAR_JDBC_USERNAME=sonar \
+            -e SONAR_JDBC_PASSWORD=sonar_ci_ephemeral_only \
+            -e SONAR_WEB_JAVAOPTS='-Xms256m -Xmx512m' \
+            -e SONAR_CE_JAVAOPTS='-Xms256m -Xmx512m' \
+            -e SONAR_SEARCH_JAVAOPTS='-Xms512m -Xmx512m' \
+            sonarqube:community
+      - name: Wait for actual SonarQube API to be UP
+        run: |
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:9000/api/system/status | grep -q '"status":"UP"'; then
+              echo 'Actual SonarQube server is UP'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'SonarQube did not become ready'
+          docker logs sonar-ci --tail 120
+          exit 1
+      - name: Create transient project and analysis token via SonarQube REST
+        run: |
+          curl -fsS -u admin:admin -X POST \
+            --data-urlencode 'name=Sunset World Data Platform' \
+            --data-urlencode 'project=sunset-world-data-platform' \
+            "$SONAR_HOST_URL/api/projects/create" > /dev/null
+          SONAR_TOKEN=$(curl -fsS -u admin:admin -X POST \
+            --data-urlencode "name=github-ci-${GITHUB_RUN_ID}" \
+            "$SONAR_HOST_URL/api/user_tokens/generate" | python -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+          test -n "$SONAR_TOKEN"
+          echo "::add-mask::$SONAR_TOKEN"
+          echo "SONAR_TOKEN=$SONAR_TOKEN" >> "$GITHUB_ENV"
+      - name: Analyze code with actual SonarScanner and enforce actual server Quality Gate
+        uses: SonarSource/sonarqube-scan-action@v5.3.1
+        with:
+          args: >-
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
+      - name: Query SonarQube analysis and coverage API for evidence
+        if: success()
+        run: |
+          curl -fsS -H "Authorization: Bearer $SONAR_TOKEN" \
+            "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=sunset-world-data-platform" \
+            | tee sonar-gate.json
+          curl -fsS -H "Authorization: Bearer $SONAR_TOKEN" \
+            "$SONAR_HOST_URL/api/measures/component?component=sunset-world-data-platform&metricKeys=coverage,bugs,vulnerabilities,code_smells" \
+            | tee sonar-measures.json
+          python - <<'PY'
+          import json
+          gate=json.load(open('sonar-gate.json'))['projectStatus']['status']
+          measures=json.load(open('sonar-measures.json'))['component']['measures']
+          assert gate == 'OK', f'SonarQube Quality Gate: {gate}'
+          print('REAL SONARQUBE QUALITY GATE:',gate)
+          print('MEASURED METRICS:',[(x['metric'], x.get('value')) for x in measures])
+          PY
+      - name: Publish SonarQube server proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunset-real-sonarqube-community-proof
+          path: |
+            coverage.xml
+            sonar-gate.json
+            sonar-measures.json
+          if-no-files-found: warn
+      - name: Diagnoses on failure
+        if: failure()
+        run: |
+          docker ps -a
+          docker logs sonar-ci --tail 100 || true
+          docker logs sonar-ci-db --tail 40 || true
+      - name: Tear down disposable server and DB
+        if: always()
+        run: |
+          docker rm -f sonar-ci sonar-ci-db || true
+          docker network rm sonar-ci || true
