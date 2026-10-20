@@ -27,9 +27,10 @@ remain in this document. The exclusion is **not** a claim of production-grade
 bucket authorization or identity-based access control. MinIO IAM policies,
 least-privilege credentials and TLS must be assessed with the actual host.
 
-The Oracle query uses a validated uppercase SQL identifier and an explicit
-allowlist because Oracle 11g does not allow binding a table name. Its local
-`NOSONAR` comment documents the reviewed identifier-only interpolation;
-credentials and watermarks remain bound/separate. The streaming image now
-builds as root only for installation and runs as non-root UID 185. Revalidate
-all Spark CI jobs before merging.
+The Oracle extractor now uses immutable, literal SQL templates selected by
+a strictly allowlisted table key; **no SQL identifier is interpolated into a
+query**. The watermark remains a bind variable. The general 100-table Oracle
+extension still requires an explicit source-query mapping and vendor access.
+The streaming image builds as root only to install dependencies and defaults
+to unprivileged UID 185 after installation; verify Spark checkpoint mounts in
+CI before any production use.
