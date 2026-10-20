@@ -24,7 +24,7 @@ def test_github_rest_api_handles_empty_dispatch_and_cli_errors(monkeypatch):
     assert g.api("repos/owner/project/actions/workflows/ci.yml/dispatches",
                  method="POST",fields=("ref=main",)) is None
     assert calls[0][0]=="POST"
-    def bad(_req,_timeout):
+    def bad(_req,timeout=None):
         raise HTTPError("https://api.github.com",403,"Forbidden",{},None)
     monkeypatch.setattr("urllib.request.urlopen",bad)
     with pytest.raises(RuntimeError,match="HTTP 403"):
