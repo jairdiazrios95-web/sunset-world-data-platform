@@ -98,6 +98,10 @@ def test_minio_manifest_pointer_publishes_only_after_uploads(tmp_path, monkeypat
             objects.append((Bucket, Key))
     monkeypatch.setitem(sys.modules, "boto3",
                         types.SimpleNamespace(client=lambda *_a, **_k: S3()))
+    monkeypatch.setitem(sys.modules, "botocore", types.ModuleType("botocore"))
+    mock_config = types.ModuleType("botocore.config")
+    mock_config.Config = lambda **_kwargs: None
+    monkeypatch.setitem(sys.modules, "botocore.config", mock_config)
     monkeypatch.setenv("MINIO_ROOT_USER", "ephemeral")
     monkeypatch.setenv("MINIO_ROOT_PASSWORD", "ephemeral")
     folder = tmp_path/"year=2024"/"month=01"
