@@ -216,8 +216,8 @@ def test_warehouse_parquet_cli_passes_config_and_dsns(monkeypatch, capsys):
     from warehouse import load_parquet
     from sunset import config
     from warehouse import loader
-    monkeypatch.setattr(config, "load", lambda *_a: {"sources": {}})
-    monkeypatch.setattr(loader, "load_parquet", lambda *_a: {"status": "PASS"})
+    monkeypatch.setattr(load_parquet, "load", lambda *_a: {"sources": {}})
+    monkeypatch.setattr(load_parquet, "load_parquet", lambda *_a: {"status": "PASS"})
     monkeypatch.setenv("SUNSET_PG_DSN", "private-test")
     monkeypatch.setattr(sys, "argv", [
         "load_parquet", "--source", "leads_ventas", "--batch-size", "12"])
