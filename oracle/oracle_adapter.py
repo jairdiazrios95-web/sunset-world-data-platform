@@ -8,7 +8,17 @@ import os
 import re
 
 VALID = re.compile(r'^[A-Z][A-Z0-9_]*$')
-DEFAULT_ALLOWED = {'LEADS_VENTAS', 'FX_HISTORICO'}
+# Explicit read-only templates. Selecting a constant by key prevents SQL
+# identifier injection without pretending Oracle supports bound table names.
+READ_QUERIES = {
+    'LEADS_VENTAS': (
+        'SELECT * FROM LEADS_VENTAS WHERE UPDATED_AT >= :watermark '
+        'ORDER BY UPDATED_AT'),
+    'FX_HISTORICO': (
+        'SELECT * FROM FX_HISTORICO WHERE UPDATED_AT >= :watermark '
+        'ORDER BY UPDATED_AT'),
+}
+DEFAULT_ALLOWED = frozenset(READ_QUERIES)
 
 
 def extract_rows(table, watermark, fetch_size=5000):
@@ -19,7 +29,8 @@ def extract_rows(table, watermark, fetch_size=5000):
             'ORACLE_ALLOWED_TABLES', ','.join(sorted(DEFAULT_ALLOWED))
         ).split(',') if name.strip()
     }
-    if not VALID.fullmatch(schema_table) or schema_table not in allowed:
+    if (not VALID.fullmatch(schema_table) or schema_table not in allowed
+            or schema_table not in READ_QUERIES):
         raise ValueError('Invalid/unsafe or non-allowlisted Oracle table identifier')
     if fetch_size < 1:
         raise ValueError('fetch_size must be positive')
@@ -35,13 +46,9 @@ def extract_rows(table, watermark, fetch_size=5000):
     ) as conn:
         with conn.cursor() as cur:
             cur.arraysize = fetch_size
-            # Table name is strictly validated against the declared allowlist;
-            # Oracle table identifiers cannot be SQL bind parameters.
-            query = (
-                f'SELECT * FROM {schema_table} '  # NOSONAR: regex + explicit allowlist; Oracle cannot bind table names
-                'WHERE UPDATED_AT >= :watermark ORDER BY UPDATED_AT'
-            )
-            cur.execute(query, watermark=watermark)  # NOSONAR: validated allowlist
+            # Constant SQL selected from allowlisted keys. Only the watermark
+            # varies at execution time, and it is passed as a bind parameter.
+            cur.execute(READ_QUERIES[schema_table], watermark=watermark)
             columns = [desc[0] for desc in cur.description]
             while True:
                 rows = cur.fetchmany(fetch_size)
