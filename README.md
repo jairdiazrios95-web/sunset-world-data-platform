@@ -1,3 +1,5 @@
+> **Calidad de código (20-oct-2026):** [SonarQube real #39353048027](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39353048027), SHA `c1daac5`: **91.1% de cobertura**, **0 bugs**, **0 vulnerabilidades reportadas** y **0 code smells**. Quality Gate de cobertura total ≥90%: **OK**. Se documentaron excepciones específicas a la comprobación AWS `ExpectedBucketOwner` para endpoints MinIO (`python:S7608`). La instancia SonarQube es temporal; sus artifacts conservan la evidencia. No implica autorización de producción.
+
 > **CI verificada — 19 de octubre de 2026:** los cinco jobs de integración
 > real aprobaron en la misma ejecución de GitHub Actions y la compuerta final
 > reportó `PASS`: [ejecución #39332219848](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39332219848),

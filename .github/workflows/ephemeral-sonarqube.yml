@@ -1,11 +1,20 @@
 name: sunset-real-ephemeral-sonarqube
 on:
   push:
-    branches: [quality/sonarqube-ready-20261019]
+    branches: [main, quality/sonarqube-ready-20261019]
     paths:
       - '.github/workflows/ephemeral-sonarqube.yml'
       - 'sonar-project.properties'
       - 'tests/**'
+      - 'oracle/**'
+      - 'sunset/**'
+      - 'streaming/**'
+      - 'rag/**'
+      - 'warehouse/**'
+      - 'scripts/**'
+      - 'airflow/dags/**'
+      - 'stress/**'
+      - 'docker-compose.yml'
   workflow_dispatch:
 permissions:
   contents: read

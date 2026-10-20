@@ -9,6 +9,9 @@ on:
       - 'tests/test_defensive_inputs.py'
       - 'scripts/verify_two_acceptance_runs.py'
       - '.github/workflows/audit-two-passes.yml'
+      - 'docker-compose.yml'
+      - 'streaming/Dockerfile'
+      - 'oracle/oracle_adapter.py'
   workflow_dispatch:
 permissions:
   contents: read
