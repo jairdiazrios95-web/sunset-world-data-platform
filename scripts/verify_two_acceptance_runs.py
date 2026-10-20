@@ -25,6 +25,31 @@ WORKFLOW = "sunset-real-stack-acceptance"
 
 
 def api(route: str, method: str = "GET", fields: tuple[str, ...] = ()):
+    if method == "POST":
+        # GitHub's workflow_dispatch endpoint returns HTTP 204 without JSON.
+        # Some gh CLI versions treat its empty body as a parse error; use
+        # the REST API directly and check the actual status.
+        from urllib.request import Request, urlopen
+        from urllib.error import HTTPError
+        payload = dict(item.split("=", 1) for item in fields)
+        request = Request(
+            "https://api.github.com/" + route,
+            data=json.dumps(payload).encode("utf-8"),
+            method="POST",
+            headers={
+                "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urlopen(request, timeout=30) as response:
+                if response.status not in (201, 202, 204):
+                    raise RuntimeError("Dispatch returned HTTP " + str(response.status))
+        except HTTPError as exc:
+            raise RuntimeError("GitHub dispatch failed with HTTP " + str(exc.code)) from exc
+        return None
     command = ["gh", "api", "-X", method, route]
     for field in fields:
         command.extend(["-f", field])
