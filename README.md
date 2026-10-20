@@ -1,233 +1,75 @@
-> **Calidad certificada en CI (20-oct-2026):** [SonarQube Community real #39353520037](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39353520037), SHA `6178e11`: **91.1% de cobertura total**, **0 bugs, 0 vulnerabilidades y 0 code smells** reportados; Quality Gate (cobertura ≥90%) **OK**. **130 pruebas Pytest aprobadas**. [CI del PR #4](https://github.com/jairdiazrios95-web/sunset-world-data-platform/pull/4) también mide 91% sobre el commit posterior. Las excepciones MinIO a `python:S7608` están justificadas en [documentación](docs/SONARQUBE_EPHEMERAL.md). El servidor es temporal, no un tablero persistente ni certificación de producción.
+# Sunset World · Data Engineering Platform
 
-> **CI verificada — 19 de octubre de 2026:** los cinco jobs de integración
-> real aprobaron en la misma ejecución de GitHub Actions y la compuerta final
-> reportó `PASS`: [ejecución #39332219848](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39332219848),
-> commit `2d42784`. Corresponde a servicios reales con **datos sintéticos**;
-> no implica certificación de producción.
->
-> **Volumetría PostgreSQL — PASS real:** [ejecución #39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627) (rama `stress/pg-42m-20261019`, commit `0f6b568`). **42,800,000 filas sintéticas** cargadas y conciliadas físicamente (9 M leads, 13.8 M pagos, 20 M comentarios), en **436.102 segundos**, con 0 huérfanos y replay sin duplicados. Es una prueba relacional en PostgreSQL, no 42.8 M end-to-end en todos los motores.
-> Oracle 11g real, API Mantis corporativa y criterios de VPG siguen pendientes
-> de accesos y definiciones del negocio.
->
-> [Checklist de entrega y limitaciones](docs/ENTREGA_FINAL_CHECKLIST.md) ·
-> [Historial de evidencia GitHub](docs/GITHUB_ACTIONS_EJECUCION_V07.md)
+**Examen técnico Data Engineer · solución reproducible con datos sintéticos.** Ingeniería de datos de extremo a extremo: ingesta, almacenamiento por capas, calidad, Data Warehouse, orquestación, streaming y búsqueda semántica.
 
-# Sunset World | Plataforma de datos demostrativa
+> **Estado de la versión técnica anterior a la limpieza documental:** [GitHub Actions #39357820940](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820940): **5/5 integraciones en PASS y aceptación final SUCCESS**. [SonarQube Community #39357820932](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820932): **91.1% de cobertura**, **130 tests Pytest PASS**, **0 bugs**, **0 vulnerabilidades** y **0 code smells** reportados, **Quality Gate OK**. Los porcentajes pertenecen a esas ejecuciones, no certifican automáticamente futuros commits. El servidor SonarQube es temporal.
 
-[![Python CI](https://img.shields.io/badge/pytest-pruebas%20locales-blue)](#evidencia-verificada) [![Origen](https://img.shields.io/badge/datos-100%25%20sint%C3%A9ticos-teal)](#fuentes-y-vol%C3%BAmenes)
+## Arquitectura · Bronze / Silver / Gold
 
-**Solución propuesta al examen técnico Data Engineer de Sunset World**, documentada contra el PDF recibido. Desarrollada como una plataforma modular con Python, Parquet, PostgreSQL/pgvector, Airflow 2, dbt, Kafka y Spark Structured Streaming. **No es un repositorio oficial ni contiene datos corporativos.**
+![Diagrama técnico de arquitectura Bronze, Silver, Gold, streaming y RAG](docs/assets/medallion-architecture.svg)
 
-**Entrega actualizada (19-oct-2026):** [Aceptación real 5/5 en main](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39336589227) (SHA `cbe4c38`) y [estrés PostgreSQL físico 42.8M](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627) (SHA `0f6b568`, 436.102 s, 0 huérfanos). **No** es una carga end-to-end de 42.8M por todos los motores. La API corporativa Mantis/Oracle no está verificada.
+**Origen / ingesta:** fuentes CSV/FX sintéticas y adaptador de lectura incremental Oracle 11g (sin conexión al Oracle corporativo), con extracciones paginadas, configuración y controles de origen.
 
-**Documento principal:** [Respuestas al examen PDF](deliverables/Sunset_World_Respuestas_Examen.pdf) | [Presentación ejecutiva (5 diapositivas)](deliverables/Sunset_World_Presentacion_Ejecutiva.pptx) | [Guion de video](docs/VIDEO_SCRIPT.md)
+**Bronze:** archivos Parquet particionados por año y mes, MinIO S3-compatible, manifiestos y conciliación de conteos. Publicación repetible y manejo explícito de reejecuciones.
 
-## Arquitectura (opción A aprobada)
+**Silver:** aterrizaje `raw` en PostgreSQL, normalización, llaves PK/FK, rechazos controlados, integridad referencial y dimensiones con historia SCD tipo 2.
 
-```mermaid
-flowchart LR
-  SRC[Oracle 11g / CSV sintéticos / FX] --> ING[Extractor parametrizado]
-  ING --> LAKE[(Parquet / MinIO)]
-  LAKE --> RAW[(PostgreSQL raw)]
-  RAW --> DW[(Data Warehouse SCD2)]
-  DW --> DBT[dbt / tests]
-  DBT --> BI[FX / Client Journey / Finanzas]
-  LAKE --> EMB[Chunking / embeddings]
-  EMB --> VEC[(pgvector)]
-  VEC --> RAG[Mantis - interfaz hipotética]
-  CALL[Call Center] --> KAFKA[(Kafka)]
-  KAFKA --> SPARK[Spark Streaming]
-  SPARK --> RAW
-  AIR[Airflow 02:00] -.orquesta.-> ING
-  AIR -.orquesta.-> DBT
-```
+**Gold:** modelo estrella y *marts* dbt, vistas de ventas, FX y Client Journey. KPIs como VPG y conversión son **provisionales** hasta validación funcional del negocio.
 
-## Inicio rápido: ejecución que SÍ funciona sin Docker
+**Procesos laterales:** Airflow 2.10.x orquesta las cargas; Kafka → Spark Structured Streaming → PostgreSQL procesa eventos con semántica *at-least-once* e idempotencia por `event_id`; el pipeline RAG prepara embeddings multilingües e índice pgvector. Mantis corporativo no está conectado.
 
-Requiere Python 3.11+ con `pytest` instalado. El generador, la auditoría y la demostración SQLite solo usan la biblioteca estándar de Python.
+## Evidencia verificable
+
+![Evidencia de pruebas sobre servicios reales y métricas SonarQube](docs/assets/ci-evidence.svg)
+
+| Componente | Evidencia |
+|---|---|
+| PostgreSQL, Parquet, dbt, modelo dimensional, replay | [CI integral #39357820940](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820940) |
+| MinIO · subida/descarga con checksum | [Misma aceptación](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820940) |
+| Airflow · DAG ejecutado sobre contenedores | [Misma aceptación](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820940) |
+| Kafka/Spark · procesamiento y alertas | [Misma aceptación](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820940) |
+| Embeddings/RAG · pgvector y replay | [Misma aceptación](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820940) |
+| Python, seguridad, cobertura y Quality Gate real | [SonarQube #39357820932](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39357820932) |
+
+La evidencia Kafka/Spark de esa ejecución incluye **5 eventos, 2 alertas y 5 filas persistidas sin duplicación tras el replay**. No se afirma garantía exactly-once distribuida.
+
+**Estrés físico PostgreSQL separado:** [CI #39334943627](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39334943627): **42,800,000 filas sintéticas** (9 M leads, 13.8 M pagos, 20 M comentarios), **436.102 segundos**, **0 huérfanos**, replay estable. Es una prueba de *PostgreSQL relacional*, **no** una carga de 42.8 M atravesando Oracle, Kafka, Spark, MinIO o RAG. Los JSON de prueba se guardan como *artifacts* de cada ejecución, no como reportes históricos versionados.
+
+## Ejecutar y reproducir
+
+Requisitos: Python 3.11; Docker y Docker Compose para pruebas de infraestructura. La reproducción de pruebas Python usa fixtures en `data/sample/`.
 
 ```bash
+git clone https://github.com/jairdiazrios95-web/sunset-world-data-platform.git
+cd sunset-world-data-platform
+python -m pip install -r requirements.txt
 python -m pytest -q tests
 python -m sunset.cli audit --input data/sample
 python -m sunset.quality --input data/sample --scope full --report reports/quality_local.json
 python -m sunset.offline_demo --input data/sample --report reports/offline_demo_verified.json
-# Ejemplo independiente y reproducible de generación:
-python -m sunset.cli generate --profile sample --output data/generada
 ```
 
-**Evidencia local histórica (17-oct-2026; no es el estado actual de CI):** 35 tests en verde; 14 reglas principales de calidad ejecutadas; 1,000 leads, 1,462 FX, 600 pagos, 1,200 comentarios en la muestra; cuatro relaciones reconciliadas (ventas↔FX, contratos↔ventas, pagos↔contratos, comentarios↔tours); auditoría `PASS`. Ver reportes JSON en `reports/`. SQLite valida la lógica de joins, **no sustituye un servidor PostgreSQL**.
+Para los servicios, copiar `.env.example` a `.env`, sustituir contraseñas de ejemplo y consultar [el runbook vigente](docs/OPERACION_Y_ACEPTACION.md). Los resultados se escriben en `reports/` al ejecutar y no se versionan.
 
-## Fuentes y volúmenes
+## Estructura actual
 
-| Volumen orientativo del PDF | Perfil `volume` (objetivo configurado) | Verificación real |
-|---|---:|---|
-| Voltux — **~4.5M registros en total del sistema** | 4,500,000 *leads_ventas* sintéticos, hipótesis para stress test | NO ejecutado a escala |
-| TMS — ~6.9M pagos | 6,900,000 | NO ejecutado a escala |
-| TMS — ~10M comentarios | 10,000,000 | NO ejecutado a escala |
-| FX — diario | Fechas definidas en `generation` | 1,462 registros sintéticos probados |
+| Carpeta | Alcance |
+|---|---|
+| `sunset/`, `config/`, `data/sample/` | Generador y datos de prueba, contratos, auditoría, calidad, Parquet/MinIO |
+| `oracle/` | Extracción incremental Oracle read-only (adaptador sin prueba corporativa) |
+| `warehouse/`, `sql/`, `dbt/` | Carga, DW, SCD2, vistas y validaciones |
+| `airflow/dags/` | Orquestación |
+| `streaming/` | Kafka, Spark y reglas de alerta |
+| `rag/` | Embeddings, pgvector y búsqueda |
+| `tests/`, `stress/`, `scripts/` | Tests, carga sintética, validación de servicios |
+| `notebooks/` | Notebook técnico |
+| `.github/workflows/` | Pruebas CI y Quality Gate |
+| `docs/` | Exclusivamente operación, criterios de SonarQube y diagramas de la solución vigente |
 
-**Aviso:** el perfil volumétrico también genera clientes, tours, contratos y dimensiones; por tanto, el **total físico generado será mayor que 21.4 millones de registros**. Los millones son referencias del examen, no un benchmark realizado ni un layout oficial.
+## Alcance, límites y decisiones
 
-La generación y procesamiento por lotes se controlan en [`config/pipeline.json`](config/pipeline.json), incluyendo semilla, fechas, perfiles, llaves, columnas obligatorias, tamaño de lote, compresión y máximo de filas por archivo. Sin secretos hardcodeados: usar `.env` local (no versionado).
+La solución implementa control por claves, conciliación, reintentos, particionado, comprobación de integridad y separación entre modelos de almacenamiento y consumo. El origen corporativo Oracle 11g, la API Mantis y las definiciones definitivas de VPG/conversión **no están disponibles**; se usan datos **sintéticos** y **no** se afirma validación de producción.
 
-## Validación real sin instalaciones en la computadora del evaluador (V0.4)
+El repositorio contiene solamente **código, pruebas, configuración, fixtures y documentación técnica vigente**. El **PDF de respuestas abiertas**, el ZIP de entrega, la **presentación ejecutiva** y un posible **video** se preparan y entregan **por separado** conforme a las instrucciones del examen. No se incluyen en Git ni se comparte información corporativa.
 
-Se incorporó un **banco de integración SQL local**, totalmente ejecutable con
-Python estándar y SQLite. Reproduce carga de diez tablas raw, dimensiones
-SCD2, FX, hechos de ventas/tours/interacciones, conciliación de FK, segunda
-carga idéntica y un control de rechazo de registros huérfanos.
-
-```bash
-python scripts/validar_local.py --leads 1000 --payments 600 --comments 1200
-# Generar una prueba mayor, también sin dependencias extra:
-python scripts/validar_local.py --leads 100000 --payments 150000 --comments 200000
-python -m pytest -q tests   # cuando pytest esté instalado
-```
-
-**Evidencia ejecutada en este entorno (17-oct-2026):** 35/35 pruebas;
-100,000 leads, 150,000 pagos y 200,000 comentarios más sus fuentes relacionadas;
-14,000 ventas, 70,000 tours, 1,462 FX y 200,000 interacciones reconciliadas;
-0 violaciones de FK; segunda ejecución idéntica según SHA-256; duración del
-paso de verificación SQL local: 17.458 s (generación excluida).
-
-Estos resultados son de **SQLite**, no resultados medidos de PostgreSQL.
-Además se verificaron reglas y preparación de texto sin brokers ni vectores:
-
-```bash
-python -m sunset.offline_services --comments data/sample/comentarios.csv
-```
-
-Se observaron 5 eventos sintéticos, 2 alertas por reglas y 1,200 chunks,
-con repetición idempotente (NO es una ejecución de Kafka ni de embeddings).
-
-La computadora utilizada para las primeras pruebas locales (17-oct-2026) no tenía
-Docker, PyArrow, Psycopg ni acceso DNS a PyPI. **Esa limitación es histórica**:
-GitHub Actions ejecutó posteriormente pruebas reales de Parquet, PostgreSQL,
-Airflow, Kafka, Spark y pgvector, descritas y enlazadas al inicio. No deben
-extrapolarse sus tiempos a producción ni confundirse con acceso a Oracle o Mantis corporativos.
-Ver [`docs/VALIDACION_REAL_SIN_DOCKER.md`](docs/VALIDACION_REAL_SIN_DOCKER.md).
-
-## Fases de ejecución (requieren entorno con internet y Docker)
-
-### 1. CSV -> Parquet BRONZE
-
-```bash
-python -m pip install -r requirements.txt
-python -m sunset.parquet --input data/sample --output data/parquet --config config/pipeline.json
-# Una fuente específica para paralelismo / Airflow:
-python -m sunset.parquet --source leads_ventas --input data/sample --output data/parquet
-```
-
-La escritura limita memoria, particiona `year=AAAA/month=MM`, rota archivos por máximo de filas, compara filas y metadatos de Parquet, guarda `_manifest.json` y reemplaza snapshot con respaldo. En **objeto S3**, usar `sunset/minio.py` (manifest pointer) o diseñar commit transaccional Iceberg; un directorio POSIX no implementa transacciones S3.
-
-### 2. PostgreSQL `raw` y modelo dimensional
-
-```bash
-cp .env.example .env      # definir secretos antes de iniciar servicios
-# Docker local; primero verificar configuración y puertos:
-docker compose config
-docker compose --profile warehouse up -d postgres
-# Exportar DSN de forma segura (NO escribir contraseñas en repositorio):
-export SUNSET_PG_DSN='postgresql://USUARIO:CLAVE@localhost:5432/sunset'
-for source in clientes leads_ventas tours contratos pagos comentarios fx_historico salas fuentes productos; do
-  python -m warehouse.load_parquet --source "$source" --lake data/parquet
-done
-python -m warehouse.build_marts
-```
-
-DDL en `sql/001_init.sql`; `sql/003_upsert_patterns.sql` y `sql/005_streaming.sql` se cargan al crear por **primera vez** el volumen de PostgreSQL. Esquema dimensional y consultas en `sql/004_marts.sql` y `sql/002_business_queries.sql`. SCD tipo 2 para clientes/salas y vistas de KPIs **provisionales hasta validación de negocio**. Ejecute `dbt run/test` en su entorno o con Airflow.
-
-### 3. Airflow / dbt
-
-```bash
-docker compose --profile airflow up -d --build airflow
-# UI: http://localhost:8080; activar DAG etl_sunset
-# Dependencias: leads y FX en paralelo -> fuentes restantes -> marts -> dbt -> calidad.
-```
-
-Airflow se fija a 2.10.5 porque el PDF solicita `sla`. Alertas webhook configurables por `ALERT_WEBHOOK_URL`; email solo cuando se configure servidor de correo. Es un contenedor `standalone` de demostración, **no producción HA**.
-
-### 4. Kafka / Spark Structured Streaming
-
-```bash
-docker compose --profile streaming up -d --build kafka postgres
-# Ejecutar dentro del contenedor Kafka:
-docker compose exec kafka bash /work/streaming/init_topics.sh
-# Productor desde terminal host tras instalar streaming/requirements.txt:
-python -m streaming.producer --bootstrap localhost:9092
-# Arrancar job Spark, revisar Maven packages, JDBC, logs y checkpoints:
-docker compose --profile streaming up -d --build spark
-```
-
-Topics: `transcripciones_raw`, `transcripciones_procesadas`, `alertas`; key = `call_id`. **Garantía real de diseño:** entrega al menos una vez; PostgreSQL `ON CONFLICT(event_id)` da idempotencia lógica. No afirmar exactly-once end-to-end sin pruebas y contratos transaccionales.
-
-### 5. Mantis / pgvector
-
-```bash
-python -m pip install -r requirements-ai.txt
-export RAG_MODEL='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'
-python -m rag.build_embeddings --lake data/parquet
-python -m rag.search '¿Qué opinan los clientes sobre el recorrido?'
-```
-
-Lectura de Parquet, limpieza limitada de información personal en fixtures, chunking parametrizado, SHA-256 para cambios, modelo multilingüe y vectores pgvector (384 dimensiones). Sin endpoint Mantis corporativo y sin autorización de PII. **No ejecutar sobre registros reales sin gobierno y seguridad aprobados.**
-
-### 6. Observabilidad (opcional)
-
-`docker compose --profile monitoring up -d grafana` levanta un tablero versionado en `monitoring/dashboards`. Abrir `localhost:3000` con el secreto `GRAFANA_ADMIN_PASSWORD` definido en `.env`. Requiere PostgreSQL disponible.
-
-## Estructura del repositorio
-
-```text
-sunset/               generación, auditoría, calidad, Parquet, demo SQLite, drift, MinIO
-warehouse/            landing Parquet->Postgres y construcción del DW
-oracle/               adaptador read-only Oracle 11g Thick y extracción por ventanas
-sql/                  DDL, esquema estrella, SCD2, UPSERT, streaming y KPIs
-airflow/dags/         DAG TaskFlow diaria 02:00
-streaming/            Kafka producer, reglas, Spark Structured Streaming
-rag/                  embeddings incrementales y retrieval pgvector
-dbt/                  staging, vistas de negocio, tests de SQL
-notebooks/            notebook reproducible sin datos corporativos
-config/               contratos JSON y perfiles sample/volume
-reports/              evidencia ejecutada en demo Python/SQLite
-deliverables/          respuestas PDF y diapositivas PPTX/PDF
-docs/                  runbook, criterios, diagramas, guion de video y decisiones
-tests/                 pruebas automatizadas (pytest)
-.github/workflows/     CI Python
-```
-
-## Evidencia verificada / limitaciones
-
-**Validado localmente (corte 17-oct-2026):** Python, modelo dimensional SQLite, replay idempotente, generador por bloques, contratos, manejo de errores y conciliación de la muestra. **Validado posteriormente en GitHub Actions:** pruebas con PyArrow y servicios reales en contenedores (véanse las ejecuciones y su alcance arriba). **No validado contra fuentes corporativas reales:** Oracle 11g, API Mantis y criterios funcionales propios de Sunset World. Las pruebas con datos sintéticos, incluido el estrés PostgreSQL, **no autorizan producción**.
-
-Antes de publicar un video final de cinco minutos, ejecutar en Docker y capturar salidas auténticas. [Runbook de aceptación](docs/OPERACION_Y_ACEPTACION.md) | [Preguntas y riesgos](docs/DECISIONS_PENDING.md) | [Respuestas completas](docs/RESPUESTAS_EXAMEN.md).
-
-## Seguridad, versiones y supuestos
-
-- Ningún servicio real de Sunset se consultó. Las fechas, IDs, salones, monedas y montos en CSV son sintéticos.
-- No versionar `data/volume`, `data/parquet`, secretos ni pesos de modelos.
-- Backfills, snapshots de origen, retención de PII y alteraciones de esquema requieren políticas de negocio y DBA.
-- `VPG`, conversión, calidad en producción y embebidos Mantis requieren aprobación funcional; en el ejemplo se usan vistas `*_provisional`.
-- Empaquetado **para subir a GitHub**, tras completar la batería de integración pendiente, no como certificación productiva.
-
-## Prueba adicional de estrés — V0.5
-
-Se incluyó un **simulador relacional SQL con lotes, FK, checkpoint, recuperación e idempotencia**.
-Se ejecutaron físicamente 23.5 millones y 42.8 millones de registros principales sintéticos
-más entidades y hechos. Los resultados se documentan en [Pruebas de estrés V0.5](docs/PRUEBAS_DE_ESTRES_V05.md).
-
-Para empezar sin servicios externos: `make stress-smoke`. Para mayor volumen:
-`make stress-plus` o `make stress-double` (requieren espacio y tiempo).
-Esto **no certifica** ejecución en Oracle, Parquet, PostgreSQL, Kafka o Spark;
-la integración real sigue pendiente de infraestructura compatible.
-
-### Volumetría adicional verificada
-
-Se generaron también los CSV originales del proyecto para el perfil + de
-23.5 M de registros principales y su auditoría dio `PASS`. El perfil SQL
-relacional 2x alcanzó 42.8 M con `PASS`. **En el corte histórico V0.5 aprobaron 41 pruebas Python y PyArrow fue omitido localmente.**
-Esa cifra no es el estado actual: la versión posterior verificó **130 pruebas**
-y ejecutó [integración PyArrow real en GitHub Actions](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39353663319).
-
-Ver `docs/PRUEBAS_DE_ESTRES_V05.md` y reportes JSON para límites exactos.
+Guías: [operación y aceptación](docs/OPERACION_Y_ACEPTACION.md) · [SonarQube real y excepciones revisadas](docs/SONARQUBE_EPHEMERAL.md).

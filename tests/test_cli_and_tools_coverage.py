@@ -10,47 +10,6 @@ from pathlib import Path
 import pytest
 
 
-def test_pdf_preprocessor_wraps_wide_markdown_tables(tmp_path, monkeypatch):
-    from scripts.pdf_preprocess import cells, prepare, main
-    assert cells("| A | B |") == ["A", "B"]
-    content = (
-        "# Report\n\n"
-        "| Component | Finding | Status |\n"
-        "| --- | --- | --- |\n"
-        "| Lake | Parquet and manifest | PASS |\n"
-        "| Warehouse | Raw and curated | PASS |\n\n"
-        "## Closing\n"
-    )
-    rendered = prepare(content)
-    assert "**Lake.**" in rendered
-    assert "**Finding:** Parquet and manifest" in rendered
-    assert "**Status:** PASS" in rendered
-    assert "| --- |" not in rendered
-    assert "## Closing" in rendered
-    source = tmp_path/"original.md"
-    output = tmp_path/"output"/"exam.md"
-    source.write_text(content)
-    monkeypatch.setattr(sys, "argv", ["preprocess", str(source), str(output)])
-    main()
-    assert output.read_text() == rendered
-
-
-def test_real_slide_builder_creates_five_slide_deck(tmp_path):
-    pptx = pytest.importorskip("pptx")
-    import scripts.build_presentation as builder
-    deck = pptx.Presentation(builder.BASE + "/deliverables/Sunset_World_Presentacion_Ejecutiva.pptx")
-    assert len(deck.slides) == 5
-    slide_titles = [
-        shape.text for slide in deck.slides for shape in slide.shapes
-        if shape.has_text_frame and shape.text
-    ]
-    assert any("plataforma" in title.lower() for title in slide_titles)
-    # Verify slide helper functions draw shapes and write text.
-    s = builder.slide("Control", "Evidencia", 1)
-    before = len(s.shapes)
-    builder.card(s, 0.5, 1.5, 5, 3, "Alertas", "Sin duplicados")
-    assert len(s.shapes) > before
-
 
 def test_runtime_cli_validar_local_runs_full_synthetic_sqlite(tmp_path, monkeypatch, capsys):
     from scripts.validar_local import main
