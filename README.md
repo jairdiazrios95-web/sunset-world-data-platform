@@ -1,4 +1,4 @@
-> **Calidad de código (20-oct-2026):** [SonarQube real #39353048027](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39353048027), SHA `c1daac5`: **91.1% de cobertura**, **0 bugs**, **0 vulnerabilidades reportadas** y **0 code smells**. Quality Gate de cobertura total ≥90%: **OK**. Se documentaron excepciones específicas a la comprobación AWS `ExpectedBucketOwner` para endpoints MinIO (`python:S7608`). La instancia SonarQube es temporal; sus artifacts conservan la evidencia. No implica autorización de producción.
+> **Calidad certificada en CI (20-oct-2026):** [SonarQube Community real #39353520037](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39353520037), SHA `6178e11`: **91.1% de cobertura total**, **0 bugs, 0 vulnerabilidades y 0 code smells** reportados; Quality Gate (cobertura ≥90%) **OK**. **130 pruebas Pytest aprobadas**. [CI del PR #4](https://github.com/jairdiazrios95-web/sunset-world-data-platform/pull/4) también mide 91% sobre el commit posterior. Las excepciones MinIO a `python:S7608` están justificadas en [documentación](docs/SONARQUBE_EPHEMERAL.md). El servidor es temporal, no un tablero persistente ni certificación de producción.
 
 > **CI verificada — 19 de octubre de 2026:** los cinco jobs de integración
 > real aprobaron en la misma ejecución de GitHub Actions y la compuerta final
@@ -56,7 +56,7 @@ python -m sunset.offline_demo --input data/sample --report reports/offline_demo_
 python -m sunset.cli generate --profile sample --output data/generada
 ```
 
-**Evidencia verificada en este entorno:** 35 tests en verde; 14 reglas principales de calidad ejecutadas; 1,000 leads, 1,462 FX, 600 pagos, 1,200 comentarios en la muestra; cuatro relaciones reconciliadas (ventas↔FX, contratos↔ventas, pagos↔contratos, comentarios↔tours); auditoría `PASS`. Ver reportes JSON en `reports/`. SQLite valida la lógica de joins, **no sustituye un servidor PostgreSQL**.
+**Evidencia local histórica (17-oct-2026; no es el estado actual de CI):** 35 tests en verde; 14 reglas principales de calidad ejecutadas; 1,000 leads, 1,462 FX, 600 pagos, 1,200 comentarios en la muestra; cuatro relaciones reconciliadas (ventas↔FX, contratos↔ventas, pagos↔contratos, comentarios↔tours); auditoría `PASS`. Ver reportes JSON en `reports/`. SQLite valida la lógica de joins, **no sustituye un servidor PostgreSQL**.
 
 ## Fuentes y volúmenes
 
@@ -101,9 +101,11 @@ python -m sunset.offline_services --comments data/sample/comentarios.csv
 Se observaron 5 eventos sintéticos, 2 alertas por reglas y 1,200 chunks,
 con repetición idempotente (NO es una ejecución de Kafka ni de embeddings).
 
-Este entorno no tiene Docker, PyArrow ni Psycopg y tampoco acceso DNS a PyPI;
-la escritura real de Parquet, PostgreSQL, Airflow, Kafka, Spark y pgvector
-permanece sin probar. No se deben extrapolar los tiempos a producción.
+La computadora utilizada para las primeras pruebas locales (17-oct-2026) no tenía
+Docker, PyArrow, Psycopg ni acceso DNS a PyPI. **Esa limitación es histórica**:
+GitHub Actions ejecutó posteriormente pruebas reales de Parquet, PostgreSQL,
+Airflow, Kafka, Spark y pgvector, descritas y enlazadas al inicio. No deben
+extrapolarse sus tiempos a producción ni confundirse con acceso a Oracle o Mantis corporativos.
 Ver [`docs/VALIDACION_REAL_SIN_DOCKER.md`](docs/VALIDACION_REAL_SIN_DOCKER.md).
 
 ## Fases de ejecución (requieren entorno con internet y Docker)
@@ -197,7 +199,7 @@ tests/                 pruebas automatizadas (pytest)
 
 ## Evidencia verificada / limitaciones
 
-**Sí probados:** Python, banco de pruebas SQL SQLite del modelo dimensional, replay idempotente, generador con tamaño por bloque, repetibilidad, contratos, errores intencionales, calidad, integridad cruzada de muestra, SQL emulado para joins en SQLite (no DW). **No probados aquí:** dependencias binarias de Parquet, conexión Oracle, PostgreSQL, Docker Compose, Airflow, Spark, Kafka, dbt en BD real, pgvector ni la API Mantis. No se declara un entorno productivo ni un throughput medido de millones.
+**Validado localmente (corte 17-oct-2026):** Python, modelo dimensional SQLite, replay idempotente, generador por bloques, contratos, manejo de errores y conciliación de la muestra. **Validado posteriormente en GitHub Actions:** pruebas con PyArrow y servicios reales en contenedores (véanse las ejecuciones y su alcance arriba). **No validado contra fuentes corporativas reales:** Oracle 11g, API Mantis y criterios funcionales propios de Sunset World. Las pruebas con datos sintéticos, incluido el estrés PostgreSQL, **no autorizan producción**.
 
 Antes de publicar un video final de cinco minutos, ejecutar en Docker y capturar salidas auténticas. [Runbook de aceptación](docs/OPERACION_Y_ACEPTACION.md) | [Preguntas y riesgos](docs/DECISIONS_PENDING.md) | [Respuestas completas](docs/RESPUESTAS_EXAMEN.md).
 
@@ -224,8 +226,8 @@ la integración real sigue pendiente de infraestructura compatible.
 
 Se generaron también los CSV originales del proyecto para el perfil + de
 23.5 M de registros principales y su auditoría dio `PASS`. El perfil SQL
-relacional 2x alcanzó 42.8 M con `PASS`. **41 pruebas Python aprobaron;
-la integración PyArrow quedó omitida localmente** y tiene un workflow de CI
-preparado pero todavía no ejecutado en GitHub.
+relacional 2x alcanzó 42.8 M con `PASS`. **En el corte histórico V0.5 aprobaron 41 pruebas Python y PyArrow fue omitido localmente.**
+Esa cifra no es el estado actual: la versión posterior verificó **130 pruebas**
+y ejecutó [integración PyArrow real en GitHub Actions](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39353663319).
 
 Ver `docs/PRUEBAS_DE_ESTRES_V05.md` y reportes JSON para límites exactos.
