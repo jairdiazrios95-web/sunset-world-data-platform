@@ -203,7 +203,8 @@ def test_real_streaming_verifier_requires_ack_and_replay(monkeypatch, tmp_path):
                                               KafkaException=Exception))
     monkeypatch.setattr(m.time, "sleep", lambda _: None)
     monkeypatch.setenv("SUNSET_PG_DSN", "temporary")
-    monkeypatch.setattr(m, "make_events", lambda *_a: events)
+    from streaming import producer as raw_producer
+    monkeypatch.setattr(raw_producer, "make_events", lambda *_a: events)
     result = m.verify(5, tmp_path/"streaming.json")
     assert result["status"] == "PASS"
     assert result["processed_topic_events"] == 5
