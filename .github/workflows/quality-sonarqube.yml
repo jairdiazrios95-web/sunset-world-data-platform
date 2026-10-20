@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install pinned audit utilities
-        run: python -m pip install 'pytest==8.3.5' 'pytest-cov==6.0.0' 'ruff==0.11.13' 'bandit==1.8.3' 'PyYAML==6.0.2' 'pyarrow==19.0.1'
+        run: python -m pip install 'pytest==8.3.5' 'pytest-cov==6.0.0' 'ruff==0.11.13' 'bandit==1.8.3' 'PyYAML==6.0.2' 'pyarrow==19.0.1' 'python-pptx==1.0.2'
       - name: Block Python syntax and undefined-name defects
         run: python -m ruff check --select E9,F63,F7,F82 sunset warehouse oracle rag streaming airflow/dags scripts stress
       - name: Block high-confidence high-severity security defects
