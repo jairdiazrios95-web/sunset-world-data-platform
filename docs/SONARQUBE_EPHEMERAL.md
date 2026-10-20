@@ -34,3 +34,20 @@ extension still requires an explicit source-query mapping and vendor access.
 The streaming image builds as root only to install dependencies and defaults
 to unprivileged UID 185 after installation; verify Spark checkpoint mounts in
 CI before any production use.
+
+## Verified results and acceptance criteria
+
+[Actual SonarQube Community execution #39353520037](https://github.com/jairdiazrios95-web/sunset-world-data-platform/actions/runs/39353520037)
+for commit `6178e11` uploaded the scanner/REST evidence and returned:
+**Quality Gate OK, total Python coverage 91.1%, 0 bugs, 0 vulnerabilities,
+0 code smells, 130 passing tests**. The 90% threshold is enforced twice:
+by pytest-cov and by the ephemeral server Quality Gate. The CI script
+additionally fails when required Sonar measures are absent, or any of the
+three issue metrics are nonzero. These are the scanner's reported metrics;
+no scanner eliminates the need for threat modeling and integration testing.
+
+The permanent-server job in `quality-sonarqube.yml` remains optional and is
+not a substitute for the ephemeral test. The SonarQube scan must pass on the
+specific candidate merge SHA; a successful prior run cannot certify later
+code changes. Credentials remain ephemeral and the server is removed after
+workflow execution.
