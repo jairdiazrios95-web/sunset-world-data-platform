@@ -3,7 +3,9 @@ on:
   push:
     branches: [main, quality/sonarqube-ready-20261019]
     paths:
-      - '.github/workflows/ephemeral-sonarqube.yml'
+      - '.github/workflows/**'
+      - 'README.md'
+      - 'docs/SONARQUBE_EPHEMERAL.md'
       - 'sonar-project.properties'
       - 'tests/**'
       - 'oracle/**'
@@ -15,6 +17,8 @@ on:
       - 'airflow/dags/**'
       - 'stress/**'
       - 'docker-compose.yml'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -35,7 +39,7 @@ jobs:
       - name: Generate genuine Python test coverage
         run: |
           python -m pip install pytest==8.3.5 pytest-cov==6.0.0 PyYAML==6.0.2 pyarrow==19.0.1 python-pptx==1.0.2
-          python -m pytest -q tests --cov=sunset --cov=warehouse --cov=oracle --cov=rag --cov=streaming --cov=airflow/dags --cov=scripts --cov=stress --cov-report=xml:coverage.xml
+          python -m pytest -q tests --cov=sunset --cov=warehouse --cov=oracle --cov=rag --cov=streaming --cov=airflow/dags --cov=scripts --cov=stress --cov-report=xml:coverage.xml --cov-fail-under=90
       - name: Prepare kernel and isolated database
         run: |
           sudo sysctl -w vm.max_map_count=524288
@@ -97,7 +101,6 @@ jobs:
           echo "Actual server gate is now: total coverage at least 90%"
       - name: Analyze code with actual SonarScanner and enforce actual server Quality Gate
         id: sonar_scan
-        continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v5.3.1
         with:
           args: >-
@@ -122,13 +125,17 @@ jobs:
           import json
           gate=json.load(open('sonar-gate.json'))['projectStatus']['status']
           measures=json.load(open('sonar-measures.json'))['component']['measures']
-          measured = {x['metric']: float(x.get('value', 0)) for x in measures}
+          measured = {x['metric']: float(x['value']) for x in measures if 'value' in x}
+          required = {'coverage', 'bugs', 'vulnerabilities', 'code_smells'}
+          missing = sorted(required - measured.keys())
+          assert not missing, f'SonarQube did not return all required metrics: {missing}'
           print('REAL SONARQUBE QUALITY GATE:', gate)
           print('MEASURED METRICS:', measured)
           assert gate == 'OK', f'SonarQube strict Quality Gate: {gate}'
-          assert measured.get('coverage', 0) >= 90, 'Actual total coverage below 90%'
-          assert measured.get('bugs', 0) == 0, 'SonarQube found bugs'
-          assert measured.get('vulnerabilities', 0) == 0, 'SonarQube found vulnerabilities'
+          assert measured['coverage'] >= 90, 'Actual total coverage below 90%'
+          assert measured['bugs'] == 0, 'SonarQube found bugs'
+          assert measured['vulnerabilities'] == 0, 'SonarQube found vulnerabilities'
+          assert measured['code_smells'] == 0, 'SonarQube found code smells'
           PY
       - name: Publish SonarQube server proof
         if: always()
