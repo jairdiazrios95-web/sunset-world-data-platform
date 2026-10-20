@@ -9,6 +9,7 @@ on:
       - 'tests/test_defensive_inputs.py'
       - 'scripts/verify_two_acceptance_runs.py'
       - '.github/workflows/audit-two-passes.yml'
+      - '.github/workflows/live-airflow.yml'
   workflow_dispatch:
 permissions:
   contents: read
