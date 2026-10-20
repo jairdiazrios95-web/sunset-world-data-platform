@@ -30,6 +30,7 @@ class FakeCursor:
     def __init__(self):
         self.staging = []
         self.rows = {}
+        self.keys = set()
         self.answer = (0,)
         self.statements = []
     def __enter__(self):
@@ -46,7 +47,8 @@ class FakeCursor:
         elif "having count(*) > 1" in query:
             self.answer = (0,)
         elif "insert into raw." in query:
-            self.rows["leads_ventas"] = len(self.staging)
+            self.keys.update(record[0] for record in self.staging)
+            self.rows["leads_ventas"] = len(self.keys)
         elif "select count(*) from raw." in query:
             self.answer = (self.rows.get("leads_ventas", 0),)
     def fetchone(self):
@@ -78,6 +80,8 @@ def attach_database(monkeypatch, cursor):
 
 def create_small_snapshot(tmp_path):
     cfg = {
+        "dataset_mode": "synthetic",
+        "profiles": {"sample": {"leads": 1, "payments": 1, "comments": 1}},
         "sources": {
             "leads_ventas": {
                 "target": "leads",
@@ -186,7 +190,7 @@ def test_oracle_snapshot_extract_uses_bounded_fetch_and_utc_dates(tmp_path, monk
     assert (root/"incremental"/report["run_id"]/"_published.json").exists()
     with pytest.raises(ValueError, match="increasing"):
         oracle.run("leads_ventas", end, start, root, cfgfile)
-    with pytest.raises(ValueError, match="fetch"):
+    with pytest.raises(ValueError, match="batch"):
         oracle.run("leads_ventas", start, end, root, cfgfile, fetch_size=0)
 
 
