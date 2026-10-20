@@ -253,7 +253,8 @@ def test_streaming_transformation_main_builds_checkpointed_two_sink_queries(monk
     monkeypatch.setitem(sys.modules,"pyspark.sql",spark_sql)
     monkeypatch.setenv("CHECKPOINT_DIR","/tmp/checkpoints")
     m.main()
-    ckpts=[v for op,k,v in operations if op=="option" and k=="checkpointLocation"]
+    ckpts=[entry[2] for entry in operations if len(entry) == 3
+           and entry[0] == "option" and entry[1] == "checkpointLocation"]
     assert ckpts == ["/tmp/checkpoints/postgres","/tmp/checkpoints/kafka"]
     assert len([x for x in operations if x[0]=="start"]) == 2
     assert ("await",) in operations
