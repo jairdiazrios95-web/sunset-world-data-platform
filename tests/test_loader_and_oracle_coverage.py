@@ -177,9 +177,11 @@ def test_oracle_snapshot_extract_uses_bounded_fetch_and_utc_dates(tmp_path, monk
     monkeypatch.setenv("ORACLE_USER", "ci")
     monkeypatch.setenv("ORACLE_PASSWORD", "ephemeral")
     monkeypatch.setenv("ORACLE_DSN", "internal")
-    monkeypatch.setattr(parquet, "convert", lambda input_dir, output, config, source: {
-        source: {"rows": 1}
-    })
+    def fake_parquet_commit(input_dir, output, config, source):
+        # The real converter creates the snapshot directory before publishing.
+        output.mkdir(parents=True, exist_ok=True)
+        return {source: {"rows": 1}}
+    monkeypatch.setattr(parquet, "convert", fake_parquet_commit)
     monkeypatch.setattr(oracle, "convert", parquet.convert)
     start = datetime(2026, 1, 1, tzinfo=timezone.utc)
     end = datetime(2026, 1, 2, tzinfo=timezone.utc)
