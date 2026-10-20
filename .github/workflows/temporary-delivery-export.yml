@@ -1,0 +1,23 @@
+name: temporary-delivery-export
+on:
+  push:
+    branches: [delivery/export-20261019]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack verified base source tree
+        run: |
+          git archive --format=zip --output=Sunset_World_Codigo_9761ade.zip 9761ade5639f21d6567e8a7986e362c01ed098ff
+          unzip -t Sunset_World_Codigo_9761ade.zip | tail -1
+          sha256sum Sunset_World_Codigo_9761ade.zip > Sunset_World_Codigo_9761ade.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sunset-delivery-source-9761ade
+          path: |
+            Sunset_World_Codigo_9761ade.zip
+            Sunset_World_Codigo_9761ade.sha256
+          retention-days: 7
